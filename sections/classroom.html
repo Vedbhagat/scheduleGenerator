@@ -1,0 +1,224 @@
+<!-- <button class="ghost" id="toggleform" onclick="toggleView();">Toggle Form</button> -->
+<div class="addnew-block" id="newClassroom" style="display: none;">
+    <p class="blockHeading">Add Classroom Capacity</p>
+    <form onsubmit="" method="POST" id="form">
+        <fieldset hidden>
+            <div>
+                <label for="classroomId">Classroom Id</label>
+                <input type="text" name="classroomId" id="classroomId" placeholder="Auto Generated (Disabled)" readonly>
+            </div>
+        </fieldset>
+        <fieldset>
+            <div>
+                <label for="floor">*Floor</label>
+                <input name="floor" id="floor" class="dropdown" type="text" required readonly placeholder="Auto Fetched">
+            </div>
+            <div>
+                <label for="room">*Room Identifier</label>
+                <input id="room" name="room" type="text" required readonly placeholder="Auto Fetched">
+            </div>
+            <div>
+                <label for="capacity">*Capacity</label>
+                <input id="capacity" name="capacity" type="number" placeholder="60/100/120/200/etc" required autofocus inputmode="numeric" min="20" max="200" title="The capacity must be between 20 and 200">
+            </div>
+        </fieldset>
+        <fieldset>
+            <div class="radiobuttonGroup">
+                <div>
+                    <input id="lectureHall" name="roomType" type="radio" value="LECTURE HALL" checked>
+                    <label for="lectureHall">Lecture Hall</label>
+                </div>
+                <div>
+                    <input id="itLab" name="roomType" type="radio" value="IT LAB">
+                    <label for="itLab">IT Lab</label>
+                </div>
+                <div>
+                    <input id="phyLab" name="roomType" type="radio" value="PHYSICS LAB">
+                    <label for="phyLab">Biology Lab</label>
+                </div>
+                <div>
+                    <input id="chemLab" name="roomType" type="radio" value="CHEMISTRY LAB">
+                    <label for="chemLab">Physics Lab</label>
+                </div>
+                <div>
+                    <input id="bioLab" name="roomType" type="radio" value="BIOLOGY LAB">
+                    <label for="bioLab">Chemistry Lab</label>
+                </div>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Classroom Availability</legend>
+            <div class="timePicker">
+                <p>
+                    <label>From:</label>
+                    <input type="time" class="time-input" name="startTime" id="startTime" value="00:00" min="07:00" max="20:00" step="900" required>
+                </p>
+                <span class="separator">-</span>
+                <p>
+                    <label>To:</label>
+                    <input type="time" class="time-input" name="endTime" id="endTime" value="00:00" min="07:00" max="20:00" step="900" required>
+                </p>
+            </div>        
+        </fieldset>
+        <div class="btn-grp">
+            <button class="secondary btn" id="sndyBtn" onclick="resetForm();" type="button">Clear</button>
+            <button class="primary btn formSubmit" id="prmyBtn" onclick="" type="button">Update</button>
+        </div>
+    </form>
+</div>
+<hr>
+<div class="view-table">
+    <table>
+        <caption>
+            Existing Classrooms
+        </caption>
+        <thead>
+            <tr>
+                <td>Sr No</td>
+                <td>Floor</td>
+                <td>Room</td>
+                <td>Type</td>
+                <td>Capacity</td>
+                <td>Availability</td>
+                <td>Status</td>
+                <td>Actions</td>
+            </tr>
+        </thead>
+        <tbody class="recordTable">
+        </tbody>
+    </table>
+</div>
+<script>
+
+applyValidityChecker();
+var form = document.getElementById('form');
+
+async function prefillUpdateform(recordId){
+    var oldData = await get_one_classroom(recordId);
+    var parsedOldData = await oldData.responseBody;
+    turnOn();
+    $('#classroomId').val( parsedOldData.CLASSROOM_ID);
+    $('#floor').val( parsedOldData.FLOOR_NUMBER);
+    $('#room').val(parsedOldData.ROOM_NUMBER);
+    $('#capacity').val(parsedOldData.CAPACITY);
+    if(parsedOldData.CATEGORY == 'LECTURE HALL'){
+        $('#lectureHall').prop('checked', true);
+    }
+    else if(parsedOldData.CATEGORY == 'BIOLOGY LAB'){
+        $('#bioLab').prop('checked', true);
+    }
+    else if(parsedOldData.CATEGORY == 'IT LAB'){
+        $('#itLab').prop('checked', true);
+    }
+    else if(parsedOldData.CATEGORY == 'CHEMISTRY LAB'){   
+        $('#chemLab').prop('checked', true);
+    }
+    else if(parsedOldData.CATEGORY == 'PHYSICS LAB'){
+        $('#phyLab').prop('checked', true);
+    }
+    $('#startTime').val(parsedOldData.START_TIME);
+    $('#endTime').val(parsedOldData.END_TIME);
+    $('#capacity').focus();
+    $('#prmyBtn').text('Update');
+    $('#prmyBtn').attr('data-recordId',parsedOldData.CLASSROOM_ID);
+    $('#prmyBtn').attr('onclick','update_classroom('+recordId+')');
+    $('#sndyBtn').attr('onclick','cancelPrefilledUpdateform()');
+    showInfoInline("Update Form Ready");
+}
+
+function cancelPrefilledUpdateform(){
+    form.reset();
+    turnOff();    
+    $('#classroomId').val("");
+    $('#floor').val("");
+    $('#room').val("");
+    $('#capacity').val("");
+    $('#sndyBtn').attr('onclick','form.reset()');
+}
+
+async function update_classroom(recordId){
+    if(!form.checkValidity()){
+        form.reportValidity();
+        return;
+    };
+    var formData = new FormData(form);
+    formData.append('formCategory','classroom');
+    formData.append('formType','update_classroom');
+    timer = showLoader("Updating Classroom");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json"
+    })
+    .done(function(result) {
+        cancelPrefilledUpdateform();
+        turnOff();
+        showInfoInline(result.responseBody);
+        createClassroomTable();
+    })
+    .fail(function(xhr, status, error) {   
+        // When status code is 429 or 400, responseJSON is available        
+        cancelPrefilledUpdateform();
+        turnOff();
+        if (xhr.responseJSON && xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function(){
+        hideLoader(timer);
+    });;
+}
+
+async function get_one_classroom(classroomId) {
+    var formData = new FormData();
+    formData.append('formCategory','classroom');
+    formData.append('formType', 'get_one_classroom');
+    formData.append('classroomId', classroomId);
+    timer =showLoader("Fetching Classroom");
+    var result = await $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+    return result;
+}
+
+
+async function createClassroomTable(){
+    var slots = await load_existing('classroom');
+    var count = 1;
+    $('.recordTable').html('');
+    await (slots.responseBody).forEach(element => {
+        var template =
+            `<tr>
+                <td>${count++}</td>
+                <td>${element[1]}</td>
+                <td>${element[2]}</td>
+                <td>${(element[6])}</td>
+                <td>${(element[3]==null)?`N.A`:element[3]}</td>
+                <td>${(element[4] ?? 'N.A') + ' - ' + (element[5] ?? 'N.A')}</td>
+                <td>
+                    ${(element[3] == null || element[4] == null || element[5] == null) ? 
+                    `<span class="chip chip-red">Details required</span>`:
+                    `<span class="chip chip-green">Ready</span>`}
+                </td>
+                <td>
+                    <button class="btn primary" data-recordId="${element[0]}" onclick="prefillUpdateform(${element[0]});">update</button>
+                </td>
+            </tr>`;
+        $('.recordTable').append('<tr>'+template+'</tr>');
+    });
+}
+
+createClassroomTable();
+</script>

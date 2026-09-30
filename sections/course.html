@@ -1,0 +1,464 @@
+<button class="ghost" id="toggleform" onclick="toggleView();">Toggle Form</button>
+<div class="addnew-block" style="display: none;">
+    <p class="blockHeading">Add New Course</p>
+    <form id="form" onsubmit="" method="POST">
+        <fieldset hidden>
+            <div>
+                <label for="courseId">Slot Id</label>
+                <input type="text" name="courseId" id="courseId" placeholder="Auto Generated (Disabled)" readonly>
+            </div>
+        </fieldset>
+        <fieldset>
+            <div>
+                <label>Department</label>
+                <select class="dropdown inp-w-base" name="departmentId" id="departmentId" required onchange="populateProgramme(this)">
+                    <option value="" disabled selected>Select Department</option>
+                </select>
+            </div>
+            <div>
+                <label>Programme</label>
+                <select class="dropdown inp-w-base" name="programmeId" id="programmeId" disabled required onchange="populateYear(this)">
+                    <option value="" disabled selected>Select Programme</option>
+                </select>
+            </div>
+            <div>
+                <label>Year</label>
+                <select class="dropdown inp-w-base" name="yearId" id="yearId" disabled required onchange="populateOptionalCourse(this)">
+                    <option value="" disabled selected>Select Year</option>
+                </select>
+            </div>
+            <div>
+                <label>Semester</label>
+                <div class="radiobuttonGroup">
+                    <div>
+                        <input type="radio" name="isEven" id="odd" value="false" checked>
+                        <label for="odd">Odd</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="isEven" id="even" value="true">
+                        <label for="even">Even</label>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <fieldset>
+            <div>
+                <label for="fullname">*Course Fullname</label>
+                <input id="fullname" name="fullname" type="text" placeholder="Bookkeeping and Accountancy" required>
+            </div>
+            <div>
+                <label for="shortname">*Course ShortName</label>
+                <input id="shortname" name="shortname" type="text" placeholder="B.K." required>
+            </div>
+        </fieldset>
+        <fieldset>
+            <div class="radiobuttonGroup">
+                <div>
+                    <input id="lectureHall" name="type" type="radio" value="LECTURE" checked>
+                    <label for="lectureHall">Lecture Hall</label>
+                </div>
+                <div>
+                    <input id="itPrac" name="type" type="radio" value="IT PRACTICAL">
+                    <label for="itPrac">IT Pract</label>
+                </div>
+                <div>
+                    <input id="phyPrac" name="type" type="radio" value="PHYSICS PRACTICAL">
+                    <label for="phyPrac">Physics Pract</label>
+                </div>
+                <div>
+                    <input id="chemPrac" name="type" type="radio" value="CHEMISTRY PRACTICAL">
+                    <label for="chemPrac">Chemistry Pract</label>
+                </div>
+                <div>
+                    <input id="bioPrac" name="type" type="radio" value="BIOLOGY PRACTICAL">
+                    <label for="bioPrac">Biology Pract</label>
+                </div>
+            </div>
+            <div>
+                <span><label for="lectureCount">Number of lectures in a week</label></span>
+                <input name="lectureCount" id="lectureCount" type="number" min="1" max="6" required>
+            </div>
+        </fieldset>
+        <fieldset>      
+            <div>
+                <!-- <input name="isOptional" id="isOptional" type="checkbox" value='true' onchange="toggleOptionalCourseSelection()"> -->
+                <input name="isOptional" id="isOptional" type="checkbox" value='true'>
+                <span><label for="isOptional">Is optional course</label></span>
+            </div>
+            <div>
+                <select class="dropdown inp-w-base" name="optionalCourseId" id="optionalCourseId" disabled>
+                    <option value="" disabled selected>Select Course Optional With</option>
+                </select>
+            </div>
+        </fieldset>
+        <div class="btn-grp">
+            <button class="secondary btn" id="sndyBtn" onclick="resetForm();" type="button">Clear</button>
+            <button class="primary btn formSubmit" id="prmyBtn" onclick="add_course();" type="button">Create</button>
+        </div>
+    </form>
+</div>
+<hr>
+<div class="view-table">
+    <table>
+        <caption>
+            Existing Courses
+        </caption>
+        <thead>
+            <tr>
+                <td >Sr No</td>
+                <td >UID</td>
+                <td >Department</td>
+                <td >Programme</td>
+                <td >Year</td>
+                <td >Semester</td>
+                <td >Course</td>
+                <td >Course (full form)</td>
+                <td >Lectures in Week</td>
+                <td >Is Practical</td>
+                <td >Is Optional</td>
+                <td >Action</td>
+            </tr>
+        </thead>
+        <tbody class="recordTable">
+        </tbody>
+    </table>
+</div>
+
+<script>
+
+applyValidityChecker();
+async function populateDepartment() {
+    // debugger;
+    var minimalData = await getPrerequisits('department');
+    var depts = await minimalData.responseBody.departments;
+    var departmentSelect = $(`#departmentId`);
+    departmentSelect.empty().append(`<option value='' disabled selected>Select Department</option>`);
+    await depts.forEach(dept => {
+        departmentSelect.append(`
+            <option value=${dept.DEPARTMENT_ID}>
+                ${dept.LONG_NAME}
+            </option>
+        `);
+    });
+    await departmentSelect.prop('disabled', false);
+}
+async function populateProgramme(select) {
+    // debugger;
+    var chosenDepartment = select.value;
+    var minimalData = await getPrerequisits('programme');
+    var pgrms = minimalData.responseBody.programmes;
+    var programmeSelect = $('#programmeId');
+    programmeSelect.empty().append('<option value="" disabled selected>Select Programme</option>');
+    pgrms.forEach(pgrm => {
+        if (String(pgrm.DEPARTMENT_ID) === String(chosenDepartment)) {
+            programmeSelect.append(
+                `<option value="${pgrm.PROGRAMME_ID}">
+                    ${pgrm.LONG_NAME}
+                </option>`
+            );
+        }
+    });
+    programmeSelect.prop('disabled', false);
+}
+async function populateYear(select) {
+    // debugger;
+    var chosenProgramme = select.value;
+    var minimalData1 = await getPrerequisits('consists');
+    var consists = minimalData1.responseBody.consists;
+    var minimalData2 = await getPrerequisits('year');
+    var years = minimalData2.responseBody.years;
+    var yearSelect = $(`#yearId`);
+    yearSelect.empty().append(`<option value='' disabled selected>Select Year</option>`);
+    consists.forEach(consist => {
+        if (consist.PROGRAMME_ID == chosenProgramme) {
+            var year = years.find(y => y.YEAR_NUMBER == consist.YEAR_NUMBER);
+            if (year) {
+                yearSelect.append(`
+                    <option value="${year.YEAR_NUMBER}">
+                        ${year.YEAR_NAME}
+                    </option>
+                `);
+            }
+        }
+    });
+    yearSelect.prop('disabled', false);
+}
+async function populateOptionalCourse(select) {
+    var chosenProgramme = select.value;
+    var minimalData = await getPrerequisits('course');
+    var crses = minimalData.responseBody.courses;
+    var courseSelect = $(`#optionalCourseId`);
+    crses.forEach(crse => {
+        if (
+            crse.PROGRAMME_ID == chosenProgramme &&
+            crse.ISOPTIONAL == true
+        ) {
+            courseSelect.append(`
+                <option value="${crse.COURSE_ID}">
+                    ${crse.LONG_NAME}
+                </option>
+            `);
+        }
+    });
+    courseSelect.prop('disabled', false);
+}
+function toggleOptionalCourseSelection(){
+    var optionalCourseSelect = $('#optionalCourseId');
+    var isOptional = $('#isOptional').prop('checked');
+    optionalCourseSelect.prop('disabled',isOptional ? false : true);
+    optionalCourseSelect.css('display',isOptional ? 'flex' : 'none');
+}
+toggleOptionalCourseSelection()
+populateDepartment()
+
+
+
+var form = document.getElementById('form');
+
+async function add_course() {
+    if(!form.checkValidity()){
+        form.reportValidity();
+        return;
+    };
+    var formData = new FormData(form);
+    formData.append('formCategory', 'course');
+    formData.append('formType', 'add_course');
+    timer =showLoader("Adding new Course");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json"
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createCourseTable();
+    })
+    .fail(function(xhr, status, error) {   
+        if (xhr.responseJSON && xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+}
+async function get_one_course(courseId){
+    var formData = new FormData();
+    formData.append("formCategory","course");
+    formData.append("formType","get_one_course");
+    formData.append("courseId",courseId);
+    timer =showLoader("Fetching Course");
+    return await $.ajax({
+        url:"api.php",
+        type:"POST",
+        data:formData,
+        processData:false,
+        contentType:false
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+}
+async function prefillUpdateform(recordId) {
+    var oldData = await get_one_course(recordId);
+    var parsedOldData = await oldData.responseBody;
+    turnOn();
+    $('#courseId').val(parsedOldData.COURSE_ID);
+    $('#fullname').val(parsedOldData.LONG_NAME);
+    $('#shortname').val(parsedOldData.SHORT_NAME);
+    if(parsedOldData.SEMESTER == "ODD") $("#odd").prop("checked", true);
+    else if(parsedOldData.SEMESTER == "EVEN") $("#even").prop("checked", true);
+    $('#lectureCount').val(parsedOldData.WEEKLY_LECTURES);
+    if (Number(parsedOldData.ISPRACTICAL) === 1) {
+        $('#isPractical').prop('checked', true);
+        $('#isLecture').prop('checked', false);
+    } else {
+        $('#isLecture').prop('checked', true);
+        $('#isPractical').prop('checked', false);
+    }
+    $('#isOptional').prop(
+        'checked',
+        Number(parsedOldData.ISOPTIONAL) === 1
+    );
+    if (Number(parsedOldData.ISOPTIONAL) === 1) {
+        $('#optionalCourseId').prop('disabled', false);
+    } else {
+        $('#optionalCourseId').prop('disabled', true);
+        $('#optionalCourseId').val('');
+    }
+
+    $('#departmentId').prop('disabled', false);
+    $('#departmentId').val(parsedOldData.DEPARTMENT_ID);
+    await populateProgramme($('#departmentId')[0]);
+    $('#programmeId').val(parsedOldData.PROGRAMME_ID);
+    await populateYear($('#programmeId')[0]);
+    $('#yearId').val(parsedOldData.YEAR_NUMBER);
+
+    $('#prmyBtn')
+        .text('Update')
+        .attr('data-recordId', parsedOldData.COURSE_ID)
+        .attr('onclick', 'update_course(' + recordId + ')');
+
+    $('#sndyBtn')
+        .text('Cancel')
+        .attr('onclick', 'cancelPrefilledUpdateform()');
+
+    showInfoInline("Update Form Ready");
+}
+async function update_course(recordId){
+    if(!form.checkValidity()){
+        form.reportValidity();
+        return;
+    };
+    var formData = new FormData(form);
+    formData.append('formCategory', 'course');
+    formData.append('formType','update_course');
+    timer = showLoader("Updating Course");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json"
+    })
+    .done(function(result) {
+        form.reset();
+        cancelPrefilledUpdateform();
+        showInfoInline(result.responseBody);
+        createCourseTable();
+    })
+    .fail(function(xhr, status, error) { 
+        if (xhr.responseJSON && xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        }else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+}
+function cancelPrefilledUpdateform() {
+    form.reset();
+    $('#yearId').val('');
+    $('#programmeId').val('');
+    $('#departmentId').val('');
+    $('#fullname').val('');
+    $('#shortname').val('');
+    $('#lectureCount').val('');
+    $('#isLecture').prop('selected', false);
+    $('#isPractical').prop('selected', false);
+    $('#isOptional').prop('selected', false);
+
+    $('#prmyBtn')
+        .text('Create')
+        .removeAttr('data-recordId')
+        .off('click')
+        .on('click', add_course);
+
+    // Restore Clear button
+    $('#sndyBtn')
+        .text('Clear')
+        .off('click')
+        .on('click', cancelPrefilledUpdateform);
+
+    showInfoInline("Update Cancelled");
+}
+async function delete_course(recordId) {
+    var formData = new FormData();
+    formData.append('formCategory', 'course');
+    formData.append('formType', 'delete_course');
+    formData.append('courseId', recordId);
+    timer =showLoader("Deleting Course");
+    var result = await $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+    showInfoInline(result.responseBody);
+    await createCourseTable();
+    return result;
+}
+
+async function createCourseTable(departmentId = false, programmeId = false, semester = false, ...kwargs) {
+    
+        var result = await getPrerequisits('course');
+        let courses = await result.responseBody.courses;
+        // Filter by department or programme
+        if (departmentId) {
+            courses = courses.filter(course =>
+                String(course.DEPARTMENT_ID) === String(departmentId)
+            );
+        }
+        if (programmeId) {
+            courses = courses.filter(course =>
+                String(course.PROGRAMME_ID) === String(programmeId)
+            );
+        }
+        if (semester) {
+            courses = courses.filter(course =>
+                String(course.SEMESTER) === String(semester)
+            );
+        }
+        var tbody = $('.recordTable');
+        tbody.empty();
+        if (!courses || courses.length === 0) {
+            tbody.append(`<tr><td colspan="10">No courses found.</td></tr>`);
+            return;
+        }
+
+        await courses.forEach((course, index) => {
+            tbody.append(`
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${course.COURSE_ID ?? ''}</td>
+                    <td onclick="createCourseTable('${course.DEPARTMENT_ID}', false);">
+                        ${course.DEPARTMENT_NAME ?? ''}
+                    </td>
+                    <td onclick="createCourseTable(false, '${course.PROGRAMME_ID}');">
+                        ${course.PROGRAMME_NAME ?? ''}
+                    </td>
+                    <td>${course.YEAR_NUMBER==1 ? "FIRST YEAR" : course.YEAR_NUMBER==2 ? "SECOND YEAR" : "THIRD YEAR"}</td>
+                    <td onclick="createCourseTable(false, false, '${course.SEMESTER}');">
+                        ${course.SEMESTER}
+                    </td>
+                    <td>${course.SHORT_NAME ?? ''}</td>
+                    <td>${course.LONG_NAME ?? ''}</td>
+                    <td>${course.WEEKLY_LECTURES ?? ''}</td>
+                    <td>${course.ISPRACTICAL == 1 ? 'Yes' : 'No'}</td>
+                    <td>${course.ISOPTIONAL == 1 ? 'Yes' : 'No'}</td>
+                    <td>
+                        <button
+                            class="btn primary"
+                            data-recordId="${course.COURSE_ID}"
+                            onclick="prefillUpdateform(${course.COURSE_ID});">
+                            update
+                        </button>
+
+                        <button
+                            class="btn secondary"
+                            data-recordId="${course.COURSE_ID}"
+                            onclick="confirmDeleteDialog('Delete ?','confirm the delete operations',${course.COURSE_ID},delete_course);">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+
+}
+
+createCourseTable();
+</script>

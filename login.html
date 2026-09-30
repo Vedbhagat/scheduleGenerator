@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="src/style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "JetBrains Mono", monospace;
+        }
+        html { font-size: 16px; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top left, #f4f4f5 0%, #fafafa 40%, #e4e4e7 100%);
+            color: #09090b;
+            padding: 1.5rem;
+            -webkit-font-smoothing: antialiased;
+        }
+        .lgn-main { width: 100%; max-width: 430px; }
+        .lgn-container {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid #d4d4d8;
+            border-radius: 1rem;
+            padding: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+        .lgn-heading {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            text-align: center;
+            color: #18181b;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #f4f4f5;
+        }
+        .lgn-heading::after {
+            content: "";
+            display: block;
+            width: 36px;
+            height: 3px;
+            background: #18181b;
+            border-radius: 999px;
+            margin: 0.75rem auto 0;
+        }
+        .lgn-form form { display: flex; flex-direction: column; gap: 1.25rem; }
+        .lgn-form form > div { display: flex; flex-direction: column; gap: 0.5rem; }
+        .lgn-form label {
+            color: #52525b;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .lgn-form input[type="text"],
+        .lgn-form input[type="password"] {
+            width: 100%;
+            padding: 0.8rem 0.9rem;
+            background: #ffffff;
+            color: #18181b;
+            border: 1px solid #d4d4d8;
+            border-radius: 0.5rem;
+            outline: none;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .lgn-form input:focus {
+            border-color: #18181b;
+            box-shadow: 0 0 0 3px rgba(24, 24, 27, 0.08);
+        }
+        .lgn-btn-grp { margin-top: 0.5rem; }
+        .lgn-button {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #18181b;
+            border-radius: 0.5rem;
+            background: #18181b;
+            color: #ffffff;
+            font-family: "JetBrains Mono", monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+        }
+        .login-error {
+            padding: 0.75rem 0.9rem;
+            border: 1px solid #fecdd3;
+            border-radius: 0.5rem;
+            background: #fff1f2;
+            color: #9f1239;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+    <title>Login</title>
+</head>
+<body>
+    <main class="lgn-main">
+        <div class="lgn-container">
+            <div class="lgn-heading">Login</div>
+            <div class="lgn-form">
+                <form id="loginForm">
+                    <div>
+                        <label for="username">Username</label>
+                        <input type="text" name="username" id="username" autocomplete="username" required>
+                    </div>
+                    <div>
+                        <label for="password">Password</label>
+                        <input type="password" name="password" id="password" autocomplete="current-password" required>
+                    </div>
+                    <div id="loginError" class="login-error" hidden></div>
+                    <div class="lgn-btn-grp">
+                        <button type="submit" class="lgn-button" id="loginButton">Login</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+    <script>
+        var loginForm = document.getElementById('loginForm');
+        var loginButton = document.getElementById('loginButton');
+        var loginError = document.getElementById('loginError');
+
+        loginForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            loginError.hidden = true;
+            loginError.textContent = '';
+            loginButton.disabled = true;
+            loginButton.textContent = 'Logging in...';
+            
+            var formData = new FormData(loginForm);
+            
+            try {
+                var response = await fetch('auth.php', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                });
+                
+                var data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.statusDescription || 'Login failed.');
+                }
+
+                window.location.href = data.responseBody || 'index.html';
+            } catch (error) {
+                loginError.textContent = error.message;
+                loginError.hidden = false;
+                loginButton.disabled = false;
+                loginButton.textContent = 'Login';
+            }
+        });
+    </script>
+</body>
+</html>

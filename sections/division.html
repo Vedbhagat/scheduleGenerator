@@ -1,0 +1,454 @@
+<!-- <button class="ghost" id="toggleform" onclick="toggleView();" hidden>Toggle Form</button> -->
+<div class="addnew-block" style="display: none;">
+    <p class="blockHeading">Add Division Details</p>
+    <form id="form" onsubmit="" method="post">
+        <fieldset class="grid col-span-2 dropdown-grp">
+            <fieldset disabled>
+                <div>
+                    <select class="dropdown myInput" name="departmentId" id="departmentId" onchange="populateProgramme(this)" required>
+                        <option value="" disabled selected>Select Department</option>
+                    </select>
+                </div>
+                <div>
+                    <select class="dropdown myInput" name="programmeId" id="programmeId" onchange="populateYear(this)" required>
+                        <option value="" disabled selected>Select Programme</option>
+                    </select>
+                </div>
+                <div>
+                    <select class="dropdown myInput" name="yearId" id="yearId" onchange="populateDivision(this)" required>
+                        <option value="" disabled selected>Select Year</option>
+                    </select>
+                </div>
+            </fieldset>
+            <fieldset>
+                <div>
+                    <select class="dropdown myInput" name="divisionId" id="divisionId" required>
+                        <option value="" disabled selected>Select Division</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="studentCount">Student Count</label>
+                    <input type="number" name="studentCount" id="studentCount" value="20" min="20" max="200" title="The Student count must be between 20 to 200" onchange="populateClassroom(-1)" required>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>
+                    Preferences
+                    <span class="infoIcon" 
+                        title="Preferences are just the request to the system &#10;and are completely optional.&#10;They may or may not get fulfilled based on the &#10;available resources and allotment procedure."
+                    >
+                        &#x1F6C8;
+                    </span>
+                </legend>
+                <div>
+                    <select class="dropdown myInput" name="classroomId" id="classroomId">
+                        <option value="" disabled selected>Select Room Number</option>
+                    </select>
+                </div>
+                <fieldset>
+                    <div>
+                        <input type="checkbox" name="prefTime" id="prefTime" value="true" onchange="$('#timesection').prop('hidden', !this.checked);$('#timesection').prop('disabled', !this.checked)">
+                        <label for="prefTime">have a preferred time?</label>
+                    </div>
+                    <fieldset id="timesection" hidden disabled>
+                        <div id="radiobuttonGroup" onchange="populateTimeBound(-1)">
+                            <div>
+                                <input type="radio" name="isStartPref" id="startPref" value="1" checked>
+                                <label for="startPref">Start Time</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="isStartPref" id="endPref" value="0">
+                                <label for="endPref">End Time</label>
+                            </div>
+                        </div>
+                        <div>
+                            <select name="timeBound" id="timeBound" class="dropdown myInput">
+                                <option disabled selected>Select time</option>
+                            </select>
+                        </div>
+                    </fieldset>    
+                </fieldset>
+            </fieldset>
+        </fieldset>
+        <div class="btn-grp">
+            <button class="secondary btn" id="sndyBtn" onclick="resetForm();" type="button">Clear</button>
+            <button class="primary btn formSubmit" id="prmyBtn" onclick="add_divisionDetails()" type="button">Update</button>
+        </div>
+    </form>
+</div>
+<hr>
+<div class="view-table">
+    <table>
+        <caption>
+            Existing Programmmes
+        </caption>
+        <thead>
+            <tr>
+                <td >sr no</td>
+                <td >Department</td>
+                <td >Programme</td>
+                <td >Year</td>
+                <td >Division</td>
+                <td >Student Count</td>
+                <td >Actions</td>
+            </tr>
+        </thead>
+        <tbody class="recordTable">
+        </tbody>
+    </table>
+</div>
+<script>
+applyValidityChecker();
+async function populateDepartment() {
+    // debugger;
+    var minimalData = await getPrerequisits('department');
+    var depts = await minimalData.responseBody.departments;
+    var departmentSelect = $(`#departmentId`);
+    departmentSelect.empty().append(`<option value='' disabled selected>Select Department</option>`);
+    await depts.forEach(dept => {
+        departmentSelect.append(`
+            <option value=${dept.DEPARTMENT_ID}>
+                ${dept.LONG_NAME}
+            </option>
+        `);
+    });
+    await departmentSelect.prop('disabled', false);
+}
+async function populateProgramme(select) {
+    // debugger;
+    var chosenDepartment = select.value;
+    var minimalData = await getPrerequisits('programme');
+    var pgrms = minimalData.responseBody.programmes;
+    var programmeSelect = $('#programmeId');
+    programmeSelect.empty().append('<option value="" disabled selected>Select Programme</option>');
+    pgrms.forEach(pgrm => {
+        if (String(pgrm.DEPARTMENT_ID) === String(chosenDepartment)) {
+            programmeSelect.append(
+                `<option value="${pgrm.PROGRAMME_ID}">
+                    ${pgrm.LONG_NAME}
+                </option>`
+            );
+        }
+    });
+    programmeSelect.prop('disabled', false);
+}
+async function populateYear(select) {
+    // debugger;
+    var chosenProgramme = select.value;
+    var minimalData1 = await getPrerequisits('consists');
+    var consists = minimalData1.responseBody.consists;
+    var minimalData2 = await getPrerequisits('year');
+    var years = minimalData2.responseBody.years;
+    var yearSelect = $(`#yearId`);
+    yearSelect.empty().append(`<option value='' disabled selected>Select Year</option>`);
+    consists.forEach(consist => {
+        if (consist.PROGRAMME_ID == chosenProgramme) {
+            var year = years.find(y => y.YEAR_NUMBER == consist.YEAR_NUMBER);
+            if (year) {
+                yearSelect.append(`
+                    <option value="${year.YEAR_NUMBER}">
+                        ${year.YEAR_NAME}
+                    </option>
+                `);
+            }
+        }
+    });
+    yearSelect.prop('disabled', false);
+}
+async function populateDivision(select) {
+    try {
+        var chosenDepartment = $('#departmentId').val();
+        var chosenProgramme = $('#programmeId').val();
+        var chosenYear = $(select).val();
+
+        var result = await getPrerequisits('division');
+        var divisions = result?.responseBody?.divisions ?? [];
+
+        var divisionSelect = $('#divisionId');
+
+        divisionSelect
+            .empty()
+            .append(
+                '<option value="" disabled selected>Select Division</option>'
+            );
+
+        var filteredDivisions = divisions.filter(division =>
+            String(division.DEPARTMENT_ID) === String(chosenDepartment) &&
+            String(division.PROGRAMME_ID) === String(chosenProgramme) &&
+            String(division.YEAR_NUMBER) === String(chosenYear)
+        );
+
+        filteredDivisions.forEach(division => {
+            divisionSelect.append(`
+                <option value="${division.DIVISION_ID}">
+                    ${division.DIVISION_NAME}
+                </option>
+            `);
+        });
+
+        divisionSelect.prop('disabled', false);
+
+    } catch (error) {
+        console.error('populateDivision error:', error);
+    }
+}
+async function populateClassroom(select) {
+    
+    var classrooms = await getPrerequisits('classroom');
+    var StudentCount = $('#studentCount').val();
+    var formattedClassrooms = classrooms.responseBody.classrooms;
+    if(select == -1){
+        select = $('#classroomId')
+    }
+
+    select.empty().append(
+        `<option disabled selected>
+           Select Classroom
+        </option>`
+    )
+
+    var availableClassrooms = formattedClassrooms.filter((room)=>{
+        return Number(room.CAPACITY) >= Number(StudentCount)    
+    })
+
+    availableClassrooms.forEach((room) => {
+        select.append(
+            `<option value="${room.CLASSROOM_ID}">
+                ${room.ROOM_NUMBER}  --  (Capacity: ${room.CAPACITY ?? 'N/A'})
+            </option>`
+        );
+    });
+}
+async function populateTimeBound(select) {
+    var timeslots = await getPrerequisits('timeslot');
+    var isStartTime = $('#startPref').prop('checked')? true:false;
+    var formattedTimeslots = timeslots.responseBody.timeslots;
+    if(select == -1){
+        select = $('#timeBound')
+    }
+
+    select.empty().append(
+        `<option disabled selected>
+           Select Time
+        </option>`
+    )
+    if(isStartTime){
+        formattedTimeslots.forEach((slot) => {
+            select.append(
+                `<option value="${slot.SLOT_ID}">
+                    ${slot.START_TIME}
+                </option>`
+            );
+        });
+    }else{
+        formattedTimeslots.forEach((slot) => {
+            select.append(
+                `<option value="${slot.SLOT_ID}">
+                    ${slot.END_TIME}
+                </option>`
+            );
+        });
+    }
+}
+populateDepartment()
+populateClassroom($('#classroomId'))
+populateTimeBound($('#timeBound'))
+
+
+var form = document.getElementById('form');
+
+async function add_divisionDetails() {
+    if(!form.checkValidity()){
+        form.reportValidity();
+        return;
+    };
+    var formData = new FormData(form);
+    formData.append('formCategory', 'division');
+    formData.append('formType', 'add_divisionDetails');
+    timer = showLoader("Updating Division");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json"
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        createDivisionTable();
+        form.reset();
+        turnOff();
+    })
+    .fail(function(xhr, status, error) {   
+        if (xhr.responseJSON && xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function delete_divisionDetails(recordId) {
+    var formData = new FormData(form);
+    formData.append('formCategory', 'division');
+    formData.append('formType', 'delete_divisionDetails');
+    formData.append('divisionId', recordId);
+    timer = showLoader("Deleting Division Details");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json"
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createDivisionTable();
+    })
+    .fail(function(xhr, status, error) {   
+        if (xhr.responseJSON && xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function prefillUpdateform(divId) {
+    
+        var result = await getPrerequisits('division');
+        var divisions = result?.responseBody?.divisions ?? [];
+        var division = divisions.find(d =>
+            String(d.DIVISION_ID) === String(divId)
+        );
+        if (!division) {
+            console.error('Division not found:', divId);
+            return;
+        }
+        turnOn();
+        await populateDepartment();
+
+        $('#departmentId').val(String(division.DEPARTMENT_ID));
+        await populateProgramme($('#departmentId')[0]);
+
+        $('#programmeId').val(String(division.PROGRAMME_ID));
+        await populateYear($('#programmeId')[0]);
+
+        $('#yearId').val(String(division.YEAR_NUMBER));
+        await populateDivision($('#yearId')[0]);
+
+        $('#divisionId').val(String(division.DIVISION_ID));
+
+        if (division.STUDENT_COUNT != null) {
+            $('#studentCount').val(division.STUDENT_COUNT);
+        }
+        await populateClassroom(-1);
+
+        if (division.CLASSROOM_ID != null) {
+            $('#classroomId').val(String(division.CLASSROOM_ID));
+        }
+        var hasPreferredTime =
+            division.START_TIME_ID != null ||
+            division.END_TIME_ID != null;
+
+        $('#prefTime').prop('checked', hasPreferredTime);
+
+        $('#timesection')
+            .prop('hidden', !hasPreferredTime)
+            .prop('disabled', !hasPreferredTime);
+        if (hasPreferredTime) {
+            var hasStartTime = division.START_TIME_ID != null;
+            $('#startPref').prop('checked', hasStartTime);
+            $('#endPref').prop('checked', !hasStartTime);
+            await populateTimeBound(-1);
+            var timeBound =
+                hasStartTime
+                    ? division.START_TIME_ID
+                    : division.END_TIME_ID;
+
+            if (timeBound != null) {
+                $('#timeBound').val(String(timeBound));
+            }
+        }
+    
+}
+
+
+
+async function createDivisionTable(departmentId = false, programmeId = false, year = false, ...kwargs) {
+        var result = await getPrerequisits('division');
+        let divisions = await result.responseBody.divisions;
+        // Filter by department or programme
+        if (departmentId) {
+            divisions = divisions.filter(division =>
+                String(division.DEPARTMENT_ID) === String(departmentId)
+            );
+        }
+        if (programmeId) {
+            divisions = divisions.filter(division =>
+                String(division.PROGRAMME_ID) === String(programmeId)
+            );
+        }
+        if (year) {
+            divisions = divisions.filter(division =>
+                String(division.YEAR_NUMBER) === String(year)
+            );
+        }
+        var tbody = $('.recordTable');
+        tbody.empty();
+        if (!divisions || divisions.length === 0) {
+            tbody.append(`<tr><td colspan="10">No divisions found.</td></tr>`);
+            return;
+        }
+
+        await divisions.forEach((division, index) => {
+            tbody.append(`
+                <tr>
+                    <td>${index + 1}</td>
+                    <!-- <td>${division.DEPARTMENT_ID?? ''}</td> -->
+                    <td onclick="createDivisionTable('${division.DEPARTMENT_ID}', false);">
+                        ${division.DEPARTMENT_NAME ?? ''}
+                    </td>
+                    <td onclick="createDivisionTable(false, '${division.PROGRAMME_ID}');">
+                        ${division.PROGRAMME_NAME ?? ''}
+                    </td>
+                    <td onclick="createDivisionTable(false, false,'${division.YEAR_NUMBER}');">
+                        ${division.YEAR_NUMBER==1 ? "FIRST YEAR" :
+                        division.YEAR_NUMBER==2 ? "SECOND YEAR" :
+                        "THIRD YEAR"}
+                    </td>
+                    <td>${division.DIVISION_NAME ?? ''}</td>
+                    <td>${division.STUDENT_COUNT ?? `<span class="chip chip-red">Not Added Yet</span>`}</td>
+                    <td>
+                        <button
+                            class="btn primary"
+                            data-recordId="${division.DIVISION_ID}"
+                            onclick="prefillUpdateform(${division.DIVISION_ID});">
+                            update
+                        </button>
+
+                        <button
+                            class="btn secondary"
+                            data-recordId="${division.DIVISION_ID}"
+                            ${division.STUDENT_COUNT==null ? 'disabled':''}
+                            onclick="confirmDeleteDialog('Delete Details ?','confirm the delete operations',${division.DIVISION_ID},delete_divisionDetails);">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+
+}
+
+createDivisionTable();
+</script>

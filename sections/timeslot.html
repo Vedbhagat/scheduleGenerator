@@ -1,0 +1,247 @@
+<button class="ghost" id="toggleform" onclick="toggleView();">Toggle Form</button>
+<div class="addnew-block" id="newTimeslot">
+    <p class="blockHeading">Add New Timeslot</p>
+    <form id="form" onsubmit="" method="POST">
+        <fieldset hidden>
+            <div>
+                <label for="slotId">Slot Id</label>
+                <input type="text" name="slotId" id="slotId" placeholder="Auto Generated (Disabled)" readonly>
+            </div>
+        </fieldset>
+        <fieldset>   
+            <div class="radiobuttonGroup" onchange="calculateEndTime()">
+                <div>
+                    <input name="slotType" id="lecture" type="radio" value='lecture' checked>
+                    <span><label for="lecture">Lecture(1 Hour)</label></span>
+                </div>
+                <div style="color:gray">
+                    <input name="slotType" id="practical" type="radio" value='practical'>
+                    <span><label for="practical">Practical(2 Hour)</label></span>
+                </div>
+                <div>
+                    <input name="slotType" id="break" type="radio" value='break'>
+                    <span><label for="break">Break(15 Minutes)</label></span>
+                </div>
+            </div>         
+        </fieldset>
+        <fieldset>
+            <div class="timePicker">
+                <p>
+                    <label>Start Time:</label>
+                    <input type="time" class="time-input" name="startTime" id="startTime" value="00:00" min="07:00" max="20:00" step="900" required onchange="calculateEndTime()">
+                </p>
+                <span class="separator">-</span>
+                <p>
+                    <label>End Time (auto calculated)</label>
+                    <input type="time" class="time-input" name="endTime" id="endTime" value="00:00" min="07:00" max="20:00" step="900" required readonly>
+                </p>
+            </div>        
+        </fieldset>
+        <div class="btn-grp">
+            <button class="secondary btn" id="sndyBtn" onclick="resetForm();" type="button">Clear</button>
+            <button class="primary btn formSubmit" id="prmyBtn" onclick="add_timeslot();" type="button">Create</button>
+        </div>
+    </form>
+</div>
+<div class="view-table">
+    <table>
+        <caption>
+            Existing Timeslots
+        </caption>
+        <thead>
+            <tr>
+                <td >Sr No</td>
+                <td >Start Time</td>
+                <td >End Time</td>
+                <td >Slot Type</td>
+                <td >Actions</td>
+            </tr>
+        </thead>
+        <tbody class="recordTable">
+            
+        </tbody>
+    </table>
+</div>
+<script>
+    
+applyValidityChecker();
+var form = document.getElementById('form');
+
+async function add_timeslot() {
+    if(!form.checkValidity()){
+        form.reportValidity();
+        return;
+    };
+    var formData = new FormData(form);
+    formData.append('formCategory', 'timeslot');
+    formData.append('formType', 'add_timeslot');
+    timer = showLoader("Adding new Timeslot");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json"
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createTimeslotTable();
+    })
+    .fail(function(xhr, status, error) {   
+        if (xhr.responseJSON && xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function prefillUpdateform(recordId){
+    var oldData = await get_one_timeslot(recordId);
+    var parsedOldData = await oldData.responseBody;
+    turnOn();
+    debugger;
+    $('#slotId').attr('value', parsedOldData.SLOT_ID);
+    $('#startTime').attr('value', parsedOldData.START_TIME);
+    $('#endTime').attr('value',parsedOldData.END_TIME);
+    $('#break').prop('checked',parsedOldData.SLOT_TYPE=='BREAK');
+    $('#lecture').prop('checked',parsedOldData.SLOT_TYPE=='LECTURE');
+    $('#practical').prop('checked',parsedOldData.SLOT_TYPE=='PRACTICAL');
+    $('#prmyBtn').text('Update');
+    $('#prmyBtn').attr('data-recordId',parsedOldData.SLOT_ID);
+    $('#prmyBtn').attr('onclick','update_timeslot('+recordId+')');
+    $('#sndyBtn').attr('onclick','cancelPrefilledUpdateform()');
+    showInfoInline("Update Form Ready");
+}
+
+function cancelPrefilledUpdateform(){
+    form.reset();    
+    $('#slotId').val("");
+    $('#startTime').val("00:00");
+    $('#endTime').val("00:00");
+    $('#lecture').prop("checked",true);
+    $('#prmyBtn').text('Create');
+    $('#prmyBtn').attr('onclick','add_timeslot()');
+    $('#sndyBtn').attr('onclick','form.reset()');
+}
+
+async function update_timeslot(recordId){
+    if(!form.checkValidity()){
+        form.reportValidity();
+        return;
+    };
+    var formData = new FormData(form);
+    formData.append('formCategory', 'timeslot');
+    formData.append('formType','update_timeslot');
+    // console.log(form);
+    timer = showLoader("Updating Timeslot");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: "json"
+    })
+    .done(function(result) {
+        form.reset();
+        showInfoInline(result.responseBody);
+        createTimeslotTable();
+    })
+    .fail(function(xhr, status, error) {   
+        // When status code is 429 or 400, responseJSON is available
+        if (xhr.responseJSON && xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function get_one_timeslot(slotId) {
+    var formData = new FormData();
+    formData.append('formCategory', 'timeslot');
+    formData.append('formType', 'get_one_timeslot');
+    formData.append('slotId', slotId);
+    timer = showLoader("Fetching Timeslot");
+    var result = await $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+    return result;
+}
+
+async function delete_timeslot(recordId) {
+    var formData = new FormData();
+    formData.append('formCategory', 'timeslot');
+    formData.append('formType', 'delete_timeslot');
+    formData.append('slotId', recordId);
+    timer = showLoader("Deleting Timeslot");
+    var result = await $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+    showInfoInline(result.responseBody);
+    await createTimeslotTable();
+    return result;
+}
+
+function calculateEndTime(){
+    var type=document.querySelector('input[name="slotType"]:checked');
+    var startTime=document.getElementById('startTime');
+    var endTime=document.getElementById('endTime');
+    if (type.value=='lecture'){
+        endTime.valueAsNumber = startTime.valueAsNumber + 3600000; // 1minute = 60,000 so 1hour = 36,00,000
+    }
+    if (type.value=='practical'){
+        endTime.valueAsNumber = startTime.valueAsNumber + 7200000; // 1minute = 60,000 so 2hour = 72,00,000
+    }
+    if (type.value=='break'){
+        endTime.valueAsNumber = startTime.valueAsNumber + 900000; // 1minute = 60,000 so 15minutes = 9,00,000
+    }
+}
+
+async function createTimeslotTable(){
+    var slots = await load_existing('timeslot');
+    var count = 1;
+    // console.log(slots.responseBody);
+    $('.recordTable').html('');
+    await (slots.responseBody).forEach(element => {
+        var template =
+            `<tr>
+                <td>${count++}</td>
+                <td>${element[1]}</td>
+                <td>${element[2]}</td>
+                <td>${element[3]}</td>
+                <td>
+                    <button class="btn primary" data-recordId="${element[0]}" onclick="prefillUpdateform(${element[0]});">update</button>
+                    <button class="btn secondary" data-recordId="${element[0]}" onclick="confirmDeleteDialog('Delete ?','confirm the delete operations',${element[0]},delete_timeslot);">Delete</button>
+                </td>
+            </tr>`;
+        $('.recordTable').append('<tr>'+template+'</tr>');
+    });
+}
+
+createTimeslotTable();
+// hideLoader();
+</script>

@@ -1,0 +1,190 @@
+<div class="timetable-status" hidden>
+    <div class="timetable-status-data">
+        <div class="timetable-status-label">Timetable <span class="chip chip-green">Generated</span></div>
+        <div class="timetable-status-caption"> A.Y 2026-27 : Odd semester</div>
+    </div>
+    <div class="timetable-status-btn-grp">
+        <button class="dropdown secondary btn">
+            View
+        </button>
+    </div>
+</div>
+<div class="dashboard-lists-container">
+    <!-- READY LIST -->
+    <div class="status-group group-ready">
+        <h3 class="group-title">Ready</h3>
+        <p hidden id="caption">Nothing ready</p>
+        <div class="status-list">
+        </div>
+    </div>
+
+    <!-- ONGOING LIST -->
+    <div class="status-group group-ongoing">
+        <h3 class="group-title">On-going</h3>
+        <p hidden  id="caption">Nothing on-going</p>
+        <div class="status-list">
+        </div>
+    </div>
+
+    <!-- PENDING LIST -->
+    <div class="status-group group-pending">
+        <h3 class="group-title">Pending</h3>
+        <p hidden id="caption">Nothing pending</p>
+        <div class="status-list"></div>
+    </div>
+</div>
+<div class="currently-available">
+    <div class="long-card">
+        <div class="long-card-label"></div>
+    </div>
+</div>
+        
+<script>
+
+function get_dashboard() {
+    var formData = new FormData();
+    formData.append('formCategory', 'dashboard');
+    formData.append('formType', 'get_dashboard');
+    timer =showLoader("Loading Dashboard");
+    return $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+}
+
+async function create_dashboard() {
+    // timer = showLoader("Creating Dashboard");
+    var dashboard = await get_dashboard();
+    var formattedDashboard = await dashboard?.responseBody;
+    checkTimetableAccess();
+    var readyGroup = $('.group-ready .status-list');
+    var ongoingGroup = $('.group-ongoing .status-list');
+    var pendingGroup = $('.group-pending .status-list');
+
+    pendingGroup.empty()
+    ongoingGroup.empty()
+    readyGroup.empty()
+
+    await formattedDashboard.forEach(module => {
+        if(module.isReady){
+            readyGroup.append(`
+                <div class="list-item">
+                    <div class="item-data">
+                        <span class="item-count">${module.dataCount}</span>
+                        <span class="item-label">${module.label}</span>
+                    </div>
+                    <div>
+                        <span class="chip chip-green" title="The module is in ready state. To UNLOCK click the button.">Locked</span>
+                        <button class="btn primary" title="All the other modules after ${module.label} will be set to unavailable." onclick="unlock_module(${module.sequence})">Unlock</button>
+                    </div>
+                </div>
+            `)
+        }
+        else if(module.isOngoing){
+            ongoingGroup.append(`
+                <div class="list-item">
+                    <div class="item-data">
+                        <span class="item-count">${module.dataCount}</span>
+                        <span class="item-label">${module.label}</span>
+                    </div>
+                    <span class="chip chip-yellow" title="The module is in modifiable state. To LOCK click the button.">Unlocked</span>
+                    <div>
+                        <button class="btn primary" onclick="navTo('${module.module}')">View</button>
+                        <button class="btn secondary" title="The ${module.label} module will be set to READY state and will be LOCKED." onclick="lock_module(${module.sequence})">Lock</button>
+                    </div>
+                </div>
+            `)
+        }
+        else if(module.isPending){
+            pendingGroup.append(`  
+                <div class="list-item">
+                    <div class="item-data">
+                        <span class="item-count">${module.dataCount}</span>
+                        <span class="item-label">${module.label}</span>
+                    </div>
+                    <div>
+                        <span class="chip chip-red" title="Lock the previous module to access this">Module Unavailable</span>
+                        <!--<button class="btn primary" disabled title="Lock the previous module to access this">Unlock</button>-->
+                    </div>
+                </div>
+            `);
+        }
+    });
+
+    $('.group-ready #caption').prop('hidden', readyGroup.find('.list-item').length > 0);
+    $('.group-ongoing #caption').prop('hidden', ongoingGroup.find('.list-item').length > 0);
+    $('.group-pending #caption').prop('hidden', pendingGroup.find('.list-item').length > 0);
+}
+
+async function lock_module(sequence){
+    var formData = new FormData();
+    formData.append('formCategory', 'dashboard');
+    formData.append('formType', 'lock_module');
+    formData.append('sequence', sequence);
+    timer =showLoader("Locking Module");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        create_dashboard();
+    })
+    .fail(function(xhr, status, error) {
+        if (xhr.responseJSON &&
+            xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+}
+
+async function unlock_module(sequence){
+    var formData = new FormData();
+    formData.append('formCategory', 'dashboard');
+    formData.append('formType', 'unlock_module');
+    formData.append('sequence', sequence);
+    timer =showLoader("UnLocking Module");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        create_dashboard();
+    })
+    .fail(function(xhr, status, error) {
+        if (xhr.responseJSON &&
+            xhr.responseJSON.responseBody) {
+            showInfoInline(xhr.responseJSON.responseBody);
+        } else {
+            showInfoInline("An unexpected error occurred.");
+        }
+    })
+    .always(function(){
+        hideLoader(timer);
+    });
+}
+
+create_dashboard()
+
+</script>

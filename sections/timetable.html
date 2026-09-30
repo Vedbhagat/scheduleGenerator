@@ -1,0 +1,346 @@
+<!-- Libraries for PDF and Excel generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<div id="generateSection" class="addnew-block" style="display: none;">
+    <p class="blockHeading">Generate New Timetable</p>
+    <form id="generateTimetableForm" onsubmit="return false;">
+        <fieldset>
+            <div>
+                <label for="academicYear">Academic Year</label>
+                <input type="text" id="academicYear" name="academicYear" placeholder="e.g., 2026-27" required pattern="^\d{4}-\d{2,4}$">
+            </div>
+            <div>
+                <label>Semester Type</label>
+                <div class="radiobuttonGroup">
+                    <div>
+                        <input type="radio" name="semester" id="semOdd" value="ODD" checked>
+                        <label for="semOdd">Odd Semester</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="semester" id="semEven" value="EVEN">
+                        <label for="semEven">Even Semester</label>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <div class="btn-grp">
+            <button class="primary btn" id="btnGenerate" onclick="generateTimetable();" type="button">
+                Run Generator & Save
+            </button>
+        </div>
+    </form>
+</div>
+
+<div id="viewSection" style="display: none;">
+    <div class="timetable-status">
+        
+        <div class="timetable-status-data">
+            <div class="timetable-status-label">Master Timetable</div>
+            <div class="timetable-status-caption" id="metaBadgeAY">A.Y: 2026-27 | Semester: ODD</div>
+        </div>
+        
+        <div class="timetable-controls-group">
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <span class="control-label hidden sm:inline-block">Division:</span>
+                <select id="divisionSelector" class="dropdown" onchange="renderSelectedDivisionTimetable(this.value)">
+                   
+                </select>
+            </div>
+
+            <div class="action-buttons-wrapper">
+                <button class="btn secondary" onclick="exportToExcel();" title="Export current division sheet to Excel">
+                    Export Excel
+                </button>
+                <button class="btn secondary" onclick="exportToPDF();" title="Export current view to PDF">
+                    Export PDF
+                </button>
+                <button class="btn critical" onclick="confirmRegenerate();" title="Wipe current timetable and regenerate">
+                    Regenerate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Printable & Printable Sheet Container -->
+    <div class="timetable-view-table" id="printableTimetableArea">
+        <!-- Official Institutional Header Details -->
+        <div class="text-center pb-4 border-b border-zinc-200 mb-4 flex flex-col gap-1">
+            <h1 class="H1 text-2xl font-black uppercase text-zinc-900" id="headerCollegeName">KET'S V. G. VAZE COLLEGE OF ARTS, SCIENCE & COMMERCE</h1>
+            <h2 class="H2 text-lg font-bold uppercase text-zinc-700" id="headerDeptProg">DEPARTMENT: <span id="valDept">--</span> | PROGRAMME: <span id="valProg">--</span></h2>
+            <div class="flex justify-center gap-6 text-xs font-bold uppercase tracking-wider text-zinc-600 mt-1">
+                <span>Year: <span id="valYear" class="text-zinc-900">--</span></span>
+                <span>Division: <span id="valDiv" class="text-zinc-900">--</span></span>
+                <span>Semester: <span id="valSem" class="text-zinc-900">--</span></span>
+                <span>Academic Year: <span id="valAY" class="text-zinc-900">--</span></span>
+            </div>
+        </div>
+    </div>
+</div>
+        <!-- Timetable Grid -->
+<div class="timetable-table-container">
+    <table class="view-table">
+        <thead>
+            <tr id="tableHeaderRow">
+                <th>Day / Time</th>
+                <!-- Timeslot columns populated dynamically -->
+            </tr>
+        </thead>
+        <tbody id="timetableGridBody">
+            <!-- Days and scheduled slots populated dynamically -->
+        </tbody>
+    </table>
+</div>
+
+
+<script>
+var currentTimetableData = null;
+var currentMetadata = null;
+
+// Initial Verification on Page Load
+async function checkTimetableStatus() {
+    var formData = new FormData();
+    formData.append('formCategory', 'timetable');
+    formData.append('formType', 'check_status');
+    
+    try {
+        var res = await $.ajax({
+            url: 'api.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        });
+
+        if (res.responseBody && res.responseBody.exists) {
+            $('#generateSection').hide();
+            $('#viewSection').show();
+            showInfoInline("Existing timetable found");
+            await loadTimetableData();
+        } else {
+            $('#viewSection').hide();
+            $('#generateSection').show();
+        }
+    } catch (e) {
+        showInfoInline("Error checking timetable status.");
+    }
+}
+
+// Trigger timetable generation algorithm
+async function generateTimetable() {
+    var form = document.getElementById('generateTimetableForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    var formData = new FormData(form);
+    formData.append('formCategory', 'timetable');
+    formData.append('formType', 'generate_and_save');
+
+    timer =showLoader("Generating Timetable...");
+    try {
+        var res = await $.ajax({
+            url: 'api.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        });
+        hideLoader(timer);
+        showInfoInline(res.statusDescription || "Timetable generated successfully.");
+        checkTimetableStatus();
+    } catch (xhr) {
+        hideLoader(timer);
+        var msg = xhr.responseJSON?.responseBody || "Failed to generate timetable.";
+        showInfoInline(msg);
+    }
+}
+
+// Fetch generated timetable grid data
+async function loadTimetableData() {
+    timer =showLoader("Loading Timetable...");
+    var formData = new FormData();
+    formData.append('formCategory', 'timetable');
+    formData.append('formType', 'get_division_view');
+
+    try {
+        var res = await $.ajax({
+            url: 'api.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        });
+        hideLoader(timer);
+
+        currentTimetableData = res.responseBody.divisions;
+        currentMetadata = res.responseBody.metadata;
+
+        $('#metaBadgeAY').text(`A.Y: ${currentMetadata.ACADEMIC_YEAR} | Semester: ${currentMetadata.SEMESTER}`);
+
+        // Populate Division Selector
+        var selector = $('#divisionSelector');
+        selector.empty();
+        Object.keys(currentTimetableData).forEach(divId => {
+            var d = currentTimetableData[divId];
+            selector.append(`<option value="${divId}">${d.PROGRAMME_NAME} - ${d.YEAR_NAME} (Div ${d.DIVISION_NAME})</option>`);
+        });
+
+        if (Object.keys(currentTimetableData).length > 0) {
+            renderSelectedDivisionTimetable(selector.val());
+        }
+    } catch (xhr) {
+        hideLoader(timer);
+        showInfoInline("Error loading timetable data.");
+    }
+}
+
+function renderSelectedDivisionTimetable(divisionId) {
+    if (!currentTimetableData || !currentTimetableData[divisionId]) return;
+
+    var data = currentTimetableData[divisionId];
+    var weekdays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+
+    // Update Header Text Values safely
+    $('#valDept').text(data.DEPARTMENT_NAME || 'N/A');
+    $('#valProg').text(data.PROGRAMME_NAME || 'N/A');
+    $('#valYear').text(data.YEAR_NAME || 'N/A');
+    $('#valDiv').text(data.DIVISION_NAME || 'N/A');
+    $('#valSem').text(currentMetadata ? currentMetadata.SEMESTER : 'N/A');
+    $('#valAY').text(currentMetadata ? currentMetadata.ACADEMIC_YEAR : 'N/A');
+
+    var allSlots = (currentMetadata && currentMetadata.timeslots) ? currentMetadata.timeslots : [];
+
+    // --- 1. FILTER ACTIVE NON-BREAK SLOTS ---
+    let filteredSlots = allSlots.filter(function(slot) {
+        if (slot.SLOT_TYPE === 'BREAK') {
+            return true;
+        }
+        for (let i = 0; i < weekdays.length; i++) {
+            var day = weekdays[i];
+            if (data.schedule && data.schedule[day] && data.schedule[day][slot.SLOT_ID]) {
+                return true;
+            }
+        }
+        return false;
+    });
+
+    // --- 2. TRIM LEADING BREAKS (Breaks before the first lecture) ---
+    while (filteredSlots.length > 0 && filteredSlots[0].SLOT_TYPE === 'BREAK') {
+        filteredSlots.shift();
+    }
+
+    // --- 3. TRIM TRAILING BREAKS (Breaks after the last lecture) ---
+    while (filteredSlots.length > 0 && filteredSlots[filteredSlots.length - 1].SLOT_TYPE === 'BREAK') {
+        filteredSlots.pop();
+    }
+
+    // --- 4. MERGE CONSECUTIVE BREAKS ---
+    var processedSlots = [];
+    let tempBreak = null;
+
+    filteredSlots.forEach(function(slot) {
+        if (slot.SLOT_TYPE === 'BREAK') {
+            if (tempBreak === null) {
+                tempBreak = Object.assign({}, slot);
+            } else {
+                tempBreak.END_TIME = slot.END_TIME; // Extend end time
+            }
+        } else {
+            if (tempBreak !== null) {
+                processedSlots.push(tempBreak);
+                tempBreak = null;
+            }
+            processedSlots.push(slot);
+        }
+    });
+
+    if (tempBreak !== null) {
+        processedSlots.push(tempBreak);
+    }
+
+    // --- 5. BUILD TABLE HEADERS ---
+    var headerRow = $('#tableHeaderRow');
+    headerRow.empty().append('<th>Day / Time</th>');
+
+    processedSlots.forEach(function(slot) {
+        var start = slot.START_TIME ? slot.START_TIME.slice(0, 5) : '';
+        var end = slot.END_TIME ? slot.END_TIME.slice(0, 5) : '';
+        var type = slot.SLOT_TYPE || '';
+        headerRow.append('<th>' + start + ' - ' + end + '<br><span class="text-[10px] text-zinc-400 font-normal">(' + type + ')</span></th>');
+    });
+
+    // --- 6. BUILD TABLE ROWS ---
+    var tbody = $('#timetableGridBody');
+    tbody.empty();
+
+    weekdays.forEach(function(day) {
+        let trHtml = '<tr><td class="font-bold bg-zinc-50">' + day + '</td>';
+
+        processedSlots.forEach(function(slot) {
+            if (slot.SLOT_TYPE === 'BREAK') {
+                trHtml += '<td class="break">BREAK</td>';
+            } else {
+                var entry = (data.schedule && data.schedule[day]) ? data.schedule[day][slot.SLOT_ID] : null;
+
+                if (entry) {
+                    var course = entry.COURSE_SHORT_NAME || entry.COURSE_NAME || '';
+                    var teacher = entry.TEACHER_NAME || '';
+                    var room = entry.ROOM_NUMBER || '';
+
+                    trHtml += '<td class="course">' +
+                                '<div class="font-bold text-zinc-900">' + course + '</div>' +
+                                '<div class="text-[11px] text-zinc-600">' + teacher + '</div>' +
+                                '<div class="text-[10px] text-zinc-500 font-normal">Room: ' + room + '</div>' +
+                              '</td>';
+                } else {
+                    trHtml += '<td class="text-zinc-300">--</td>';
+                }
+            }
+        });
+
+        trHtml += '</tr>';
+        tbody.append(trHtml);
+    });
+}
+
+function exportToExcel() {
+    window.location.href = 'api.php?formCategory=timetable&formType=export_xls';
+}
+
+function exportToPDF() {
+    window.open('api.php?formCategory=timetable&formType=export_pdf', '_blank');
+}
+
+
+
+// Confirmation Dialog to Reset/Regenerate
+function confirmRegenerate() {
+    if (!confirm("Regenerating will clear the currently saved timetable for this period. Do you wish to continue?")) {
+        return;
+    }
+    var formData = new FormData();
+    formData.append('formCategory', 'timetable');
+    formData.append('formType', 'clear_timetable');
+
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    }).done(function() {
+        checkTimetableStatus();
+        $("#timetableGridBody").empty()
+        $("#tableHeaderRow").empty()
+    });
+}
+
+// Execute initial load
+checkTimetableStatus();
+</script>

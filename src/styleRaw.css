@@ -1,0 +1,627 @@
+/* 
+npx @tailwindcss/cli -i ./ATGS/timetableGenerationSystem/src/styleRaw.css -o ./ATGS/timetableGenerationSystem/src/style.css --watch
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap");
+@import "tailwindcss";
+@reference "tailwindcss";
+
+@theme {
+  /* Monochromatic Slate Palette */
+  --color-primary: #0f172a; /* Dark Slate Base */
+  --color-primary-hover: #1e293b; /* Hover Slate */
+  --color-secondary: #f1f5f9; /* Light Slate Neutral */
+  --color-secondary-hover: #e2e8f0;
+
+  --color-background: #f8fafc; /* Page Background Tint */
+  --color-surface: #ffffff; /* Pure White Surface */
+  --color-defaultText: #0f172a; /* Primary Monochromatic Text */
+  --color-mutedText: #64748b; /* Muted Subtext */
+
+  /* Functional Status Colors (Soft Highlights) */
+  --color-success-bg: #ecfdf5;
+  --color-success-border: #a7f3d0;
+  --color-success-text: #047857;
+
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-text: #b45309;
+
+  --color-error-bg: #fff1f2;
+  --color-error-border: #fecdd3;
+  --color-error-text: #be123c;
+
+  --font-monospace: "JetBrains Mono", monospace;
+}
+
+/* ==========================================================================
+   GLOBAL BASE & CONTAINER STYLES
+   ========================================================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box !important;
+  font-family: var(--font-monospace);
+  transition-property: color, background-color, border-color, box-shadow, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease-in-out;
+}
+
+html {
+  @apply text-[13px] sm:text-[14px] lg:text-[15px];
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 min-h-screen flex justify-center items-start lg:items-center antialiased p-0 sm:p-4;
+}
+
+.appBody {
+  @apply min-h-screen 2xl:min-h-0 2xl:h-[92vh] w-full max-w-[1280px] bg-white 2xl:rounded-xl 2xl:shadow-md border-slate-300 2xl:border flex flex-col overflow-hidden;
+}
+
+main {
+  @apply w-full flex flex-col min-h-full;
+}
+
+hr {
+  @apply border-slate-200/80 my-5;
+}
+
+.none {
+  display: none !important;
+}
+
+/* ==========================================================================
+   HEADER & NAVIGATION (FULLY RESPONSIVE)
+   ========================================================================== */
+header {
+  @apply flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 px-4 sm:px-6 py-3 bg-slate-900 text-slate-100 border-b border-slate-800 shadow-xs w-full;
+}
+
+header .user {
+  @apply text-xs font-bold tracking-wider uppercase text-slate-300 hover:text-white transition-colors cursor-default flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto text-center sm:text-left;
+}
+
+header .header-tag {
+  @apply w-full sm:w-auto flex justify-center items-center;
+}
+
+header .header-tag select,
+header select.navigator {
+  @apply w-full sm:w-auto max-w-full bg-slate-800 text-slate-100 border border-slate-700 rounded-md px-3 py-1.5 text-xs font-medium uppercase tracking-wider cursor-pointer hover:bg-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-400 text-center sm:text-left;
+}
+
+header .header-menu {
+  @apply flex flex-row items-center justify-center sm:justify-end gap-2 w-full sm:w-auto;
+}
+
+header .header-menu .btn {
+  @apply flex-1 sm:flex-none px-3 py-1.5 text-[11px] sm:text-xs;
+}
+
+#MainContents {
+  @apply p-3 sm:p-6 lg:p-8 flex-1 bg-slate-50/50 w-full;
+}
+
+/* ==========================================================================
+   MONOCHROMATIC BUTTON SYSTEM
+   ========================================================================== */
+.btn {
+  @apply inline-flex items-center justify-center px-3.5 sm:px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wider cursor-pointer border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed text-center whitespace-nowrap;
+}
+
+.primary {
+  @apply bg-slate-900 text-white border-slate-900 hover:bg-slate-800 hover:border-slate-800 active:bg-slate-950;
+}
+
+.secondary {
+  @apply bg-slate-100 text-slate-800 border-slate-300/80 hover:bg-slate-200 hover:border-slate-400 active:bg-slate-300;
+}
+
+.tertiary {
+  @apply bg-transparent text-slate-700 border-transparent hover:text-slate-950 hover:bg-slate-100;
+}
+
+.critical {
+  @apply bg-slate-800 text-slate-100 border-slate-800 hover:bg-slate-950 hover:border-slate-950;
+}
+
+.ghost {
+  @apply bg-white border border-slate-300 rounded-md px-3.5 sm:px-4 py-2 font-bold text-xs uppercase tracking-wider text-slate-800 hover:bg-slate-100 hover:border-slate-400 cursor-pointer shadow-2xs;
+}
+
+/* ==========================================================================
+   INPUTS & FORM CONTROLS
+   ========================================================================== */
+input[type="text"],
+input[type="time"],
+input[type="password"],
+input[type="number"],
+.myInput,
+.dropdown {
+  @apply w-full bg-white border border-slate-300 rounded-md px-3.5 py-2 text-xs font-medium text-slate-900 placeholder-slate-400 uppercase transition-all shadow-2xs hover:border-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900;
+}
+
+input[readonly],
+.dropdown[read-only] {
+  @apply bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed hover:border-slate-200;
+}
+
+input[type="checkbox"] {
+  @apply appearance-none h-4 w-4 rounded border border-slate-300 bg-white checked:bg-slate-900 checked:border-slate-900 hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-1 transition-all cursor-pointer relative checked:after:content-['✓'] checked:after:text-white checked:after:text-xs checked:after:font-bold checked:after:absolute checked:after:top-[-2px] checked:after:left-[2px];
+}
+
+/* ==========================================================================
+   STATUS CHIPS & BADGES
+   ========================================================================== */
+.chip {
+  @apply inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wide border select-none whitespace-nowrap;
+}
+
+.chip-green {
+  @apply bg-emerald-50 text-emerald-800 border-emerald-300;
+}
+
+.chip-yellow {
+  @apply bg-amber-50 text-amber-800 border-amber-300;
+}
+
+.chip-red {
+  @apply bg-rose-50 text-rose-800 border-rose-300;
+}
+
+.chip-blue {
+  @apply bg-sky-50 text-sky-800 border-sky-300;
+}
+
+/* ==========================================================================
+   FORM BLOCK & FIELDSETS
+   ========================================================================== */
+.addnew-block {
+  @apply bg-white border border-slate-200 rounded-xl p-4 sm:p-6 lg:p-8 max-w-[52rem] w-full mx-auto my-4 shadow-2xs;
+}
+
+.addnew-block .blockHeading {
+  @apply text-sm sm:text-base font-bold uppercase tracking-wide text-slate-900 pb-3 border-b border-slate-200 text-center sm:text-left;
+}
+
+.addnew-block fieldset {
+  @apply border border-slate-200 rounded-lg p-3 sm:p-5 my-3 sm:my-4 flex flex-col gap-3.5 bg-slate-50/50 min-w-0;
+}
+
+.addnew-block label {
+  @apply text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 inline-block;
+}
+
+.addnew-block .btn-grp {
+  @apply flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 mt-4 pt-4 border-t border-slate-100;
+}
+
+.timePicker {
+  @apply flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 bg-white p-3 rounded-lg border border-slate-200;
+}
+
+.timePicker > p {
+  @apply flex flex-col gap-1 flex-1 min-w-0 m-0;
+}
+
+.timePicker .time-input {
+  @apply w-full text-center font-bold tracking-wider text-slate-900 bg-white border border-slate-300 rounded-md py-2 transition-all focus:border-slate-900 focus:ring-1 focus:ring-slate-900;
+}
+
+.timePicker .time-input[readonly] {
+  @apply bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed;
+}
+
+.timePicker .separator {
+  @apply text-lg font-black text-slate-400 select-none hidden sm:block self-center;
+}
+
+.radiobuttonGroup {
+  @apply flex flex-wrap gap-3 sm:gap-4 items-center bg-white p-3 rounded-lg border border-slate-200;
+}
+
+.radiobuttonGroup > div {
+  @apply flex items-center gap-2 cursor-pointer;
+}
+
+input[type="radio"] {
+  @apply appearance-none m-0 h-4 w-4 rounded-full border border-slate-300 bg-white relative cursor-pointer focus:outline-none checked:border-slate-900 checked:bg-white;
+}
+
+input[type="radio"]:checked::after {
+  content: "";
+  @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-slate-900;
+}
+
+#partTimeSection,
+#partTimeSection .timePicker {
+  display: none;
+}
+
+/* ==========================================================================
+   TABLE DESIGN & GRID DISPLAY (DESKTOP)
+   ========================================================================== */
+.view-table {
+  @apply bg-white border border-slate-200 rounded-xl p-3 sm:p-6 my-4 shadow-2xs w-full max-w-full overflow-x-auto;
+}
+
+table {
+  @apply w-full border-collapse text-left;
+}
+
+table caption {
+  @apply text-xs sm:text-sm font-bold text-slate-900 text-left mb-3 uppercase tracking-wide border-b border-slate-200 pb-2;
+}
+
+table thead {
+  @apply bg-slate-100 border-b border-slate-200;
+}
+
+table thead td,
+table thead th {
+  @apply py-2.5 sm:py-3 px-2 sm:px-3 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-700 text-center border-b border-slate-200 whitespace-nowrap;
+}
+
+table tbody tr {
+  @apply border-b border-slate-100 transition-colors hover:bg-slate-50;
+}
+
+table tbody tr:nth-child(even) {
+  @apply bg-slate-50/40;
+}
+
+table td {
+  @apply px-2 sm:px-3 py-2 sm:py-2.5 text-[11px] sm:text-xs font-medium text-slate-800 text-center align-middle;
+}
+
+table td button {
+  @apply shadow-2xs px-2.5 py-1 my-0.5 text-[10px] sm:text-[11px];
+}
+
+/* Timetable Grid View Specifics */
+#timetableGridTable {
+  @apply min-w-full;
+}
+
+.timetable-view-table {
+  @apply w-full;
+}
+
+.timetable-view-table table th,
+.timetable-view-table table td {
+  @apply border border-slate-300 p-2 sm:p-3;
+}
+
+.timetable-view-table table .course {
+  @apply text-xs font-bold text-slate-900 uppercase;
+}
+
+.timetable-view-table table .break {
+  @apply bg-slate-100 text-slate-500 font-bold uppercase tracking-[4px] sm:tracking-[6px] text-center text-[10px] sm:text-xs py-3;
+}
+
+.timetable-table-container {
+    @apply w-[100] overflow-x-auto;
+}
+
+.emptySlot {
+  @apply text-[9px] font-medium tracking-wider text-slate-400 uppercase;
+}
+
+.slotBox {
+  @apply h-7 text-center;
+}
+
+/* ==========================================================================
+   MOBILE TIMETABLE CARD VIEW (SOLUTION 1 STYLES)
+   ========================================================================== */
+.mobile-schedule-container {
+  @apply flex flex-col gap-4 w-full;
+}
+
+.mobile-day-card {
+  @apply bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col gap-2.5;
+}
+
+.mobile-day-title {
+  @apply font-black text-xs uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-2 text-left bg-slate-50 -mx-4 -mt-4 p-3 rounded-t-xl;
+}
+
+.mobile-slot-item {
+  @apply flex justify-between items-center py-2.5 border-b border-dashed border-slate-200 gap-3 text-left;
+}
+
+.mobile-slot-item:last-child {
+  @apply border-b-0 pb-0;
+}
+
+.mobile-slot-time {
+  @apply text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200 shrink-0 whitespace-nowrap;
+}
+
+.mobile-slot-content {
+  @apply flex flex-col items-end text-right min-w-0 flex-1;
+}
+
+.mobile-break-item {
+  @apply bg-slate-100 border border-slate-200/80 p-2 rounded-md text-center text-[10px] font-extrabold text-slate-500 uppercase tracking-widest my-1;
+}
+
+/* ==========================================================================
+   DASHBOARD CARDS & LISTS
+   ========================================================================== */
+.dashboard-lists-container {
+    @apply flex flex-col lg:flex-row gap-4 w-full my-4;
+    /* @apply flex flex-col xl:flex-row gap-4 w-full my-4; */
+}
+.status-group {
+  @apply flex-1 rounded-2xl p-4 border border-zinc-200 shadow-xs flex flex-col gap-3;
+}
+
+.group-title {
+  @apply text-xs font-extrabold uppercase tracking-wider text-zinc-700 px-1 mb-1;
+}
+.group-ready {
+  @apply bg-emerald-50/60 border-emerald-200;
+}
+.group-ongoing {
+  @apply bg-amber-50/60 border-amber-200;
+}
+.group-pending {
+  @apply bg-rose-50/60 border-rose-200;
+}
+.status-list {
+  @apply flex flex-col gap-2.5;
+}
+
+.group-ongoing .status-list .list-item{
+  @apply flex-col! *:m-2
+}
+.list-item {
+  @apply bg-white border border-zinc-200/80 rounded-xl p-3.5 flex items-center justify-between shadow-xs hover:shadow-sm transition-all;
+}
+.item-data {
+  @apply flex flex-col items-baseline;
+}
+.item-count {
+  @apply text-xl font-black text-zinc-900;
+}
+.item-label {
+  @apply text-xs font-bold uppercase tracking-wide text-zinc-600;
+}
+
+.group-ongoing .status-list .item-data {
+  @apply items-center gap-1;
+}
+.group-ongoing .status-list .item-count {
+  @apply text-3xl;
+}
+.group-ongoing .status-list .item-label {
+  @apply text-sm;
+}
+
+
+/* ==========================================================================
+   FIXED & REFINED TIMETABLE CONTROL TOOLBAR
+   ========================================================================== */
+.timetable-status {
+  @apply bg-slate-900 text-white rounded-xl p-4 sm:p-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-sm my-4 w-full overflow-hidden;
+}
+
+/* Left Metadata Block */
+.timetable-status-data {
+  @apply flex flex-col items-center lg:items-start text-center lg:text-left gap-0.5 shrink-0;
+}
+
+.timetable-status-label {
+  @apply text-base sm:text-lg font-black tracking-wider uppercase text-white;
+}
+
+.timetable-status-caption {
+  @apply text-xs font-semibold text-slate-400 uppercase tracking-wide;
+}
+
+/* Right Actions Toolbar Container */
+.timetable-status .timetable-controls-group {
+  @apply flex flex-wrap lg:flex-nowrap items-center justify-center lg:justify-end gap-2.5 w-full lg:w-auto min-w-0;
+}
+
+/* Inline Label Styling */
+.timetable-status .control-label {
+  @apply text-[11px] font-bold uppercase tracking-wider text-slate-300 whitespace-nowrap;
+}
+
+/* Division Dropdown inside Bar */
+.timetable-status select#divisionSelector {
+  @apply bg-white text-slate-900 font-bold border-0 px-3 py-2 text-xs rounded-md shadow-2xs focus:ring-2 focus:ring-slate-400 cursor-pointer w-full sm:w-auto max-w-full truncate;
+}
+
+/* Button Group Wrapper to prevent individual button overflowing */
+.timetable-status .action-buttons-wrapper {
+  @apply flex flex-wrap sm:flex-nowrap items-center justify-center gap-2 w-full sm:w-auto shrink-0;
+}
+
+.timetable-status .action-buttons-wrapper .btn {
+  @apply flex-1 sm:flex-initial px-3.5 py-2 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-2xs;
+}
+
+/* ==========================================================================
+   LOADER & DIALOG POPUPS
+   ========================================================================== */
+#load_wrapper {
+  @apply fixed inset-0 w-screen h-screen flex items-center justify-center bg-slate-950/20 backdrop-blur-xs z-[9999];
+}
+
+#loader_container {
+  @apply w-[300px] sm:w-[350px] min-h-[180px] p-5 rounded-2xl bg-white flex flex-col items-center justify-center gap-5 shadow-2xl border border-slate-200;
+}
+
+#loader {
+  @apply m-0 w-12 h-12 rounded-full border-[6px] border-slate-200 border-l-slate-900 animate-spin;
+}
+
+#loader_data {
+  @apply m-0 capitalize font-black text-center text-xs sm:text-sm text-slate-900;
+}
+
+#formInfoLine {
+  @apply fixed bottom-5 right-5 z-[10000] m-0 p-0 pointer-events-none;
+  width: auto;
+  height: auto;
+}
+
+#formInfoLine span {
+  @apply inline-flex items-center gap-2 px-4 py-3 text-xs font-semibold rounded-lg shadow-xl bg-slate-900 text-white text-left border border-slate-700 max-w-[360px] min-w-[220px] break-words pointer-events-auto;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.tempPopup {
+  @apply fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4;
+}
+
+.dialog {
+  @apply bg-white border border-slate-300 rounded-xl max-w-md w-full p-5 sm:p-6 shadow-2xl transform transition-all duration-150;
+}
+
+.dialog-heading {
+  @apply text-base font-extrabold uppercase tracking-wide text-slate-900 text-center mb-2;
+}
+
+.dialog-description {
+  @apply text-xs sm:text-sm text-slate-600 text-center mb-5 leading-relaxed;
+}
+
+.dialog-button-group {
+  @apply flex justify-center gap-3 pt-2;
+}
+
+/* ==========================================================================
+   PRINT / PDF STYLES
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .appBody,
+  header,
+  .btn,
+  .btn-grp,
+  #load_wrapper,
+  #generateSection,
+  .mobile-schedule-container {
+    display: none !important;
+  }
+
+  .hidden.md\:block {
+    display: block !important;
+  }
+
+  .view-table {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .page {
+    page-break-after: always;
+    padding: 10px;
+  }
+
+  .page:last-child {
+    page-break-after: avoid;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .header h2 {
+    margin: 0;
+    font-size: 14px;
+    text-transform: uppercase;
+  }
+
+  .header h3 {
+    margin: 3px 0;
+    font-size: 12px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  th,
+  td {
+    border: 1px solid #000 !important;
+    padding: 6px;
+    text-align: center;
+    font-size: 10px;
+    word-wrap: break-word;
+  }
+
+  th {
+    background-color: #f2f2f2 !important;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .break {
+    background-color: #e0e0e0 !important;
+    font-weight: bold;
+  }
+}
+
+/* ==========================================================================
+   DEEP RESPONSIVE ADJUSTMENTS
+   ========================================================================== */
+@media (max-width: 700px) {
+  header {
+    @apply p-3;
+  }
+
+  .addnew-block {
+    @apply p-3.5 my-2 border-0 shadow-none;
+  }
+
+  .btn-grp .btn {
+    @apply w-full;
+  }
+
+  .timePicker {
+    @apply flex-col items-stretch;
+  }
+
+  .radiobuttonGroup {
+    @apply flex-col items-start gap-2;
+  }
+
+  .timetable-controls-group {
+    @apply flex-col;
+  }
+}

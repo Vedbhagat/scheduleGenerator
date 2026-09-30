@@ -1,0 +1,251 @@
+<button class="ghost" id="toggleform" onclick="toggleView();">Toggle Form</button>
+<div class="addnew-block">
+    <p class="blockHeading">Map Optional Courses</p>
+    <form id="form" onsubmit="" method="POST">
+        <fieldset hidden>
+            <div>
+                <label for="courseId">Slot Id</label>
+                <input type="text" name="courseId" id="courseId" placeholder="Auto Generated (Disabled)" readonly>
+            </div>
+        </fieldset>
+        <fieldset>
+            <div>
+                <label>Course One</label>
+                <select class="dropdown inp-w-base" name="course1" id="course1" disabled required>
+                    <option value="" disabled selected>Select Year</option>
+                </select>
+            </div>
+            <div>
+                <label>Course Two</label>
+                <select class="dropdown inp-w-base" name="course2" id="course2" disabled required>
+                    <option value="" disabled selected>Select Year</option>
+                </select>
+            </div>
+        </fieldset>
+        <div class="btn-grp">
+            <button class="secondary btn" id="sndyBtn" onclick="resetForm(); populateOptionalCourse();" type="button">Clear</button>
+            <button class="primary btn formSubmit" id="prmyBtn" onclick="map_course();" type="button">Map</button>
+        </div>
+    </form>
+</div>
+<hr>
+<div class="view-table">
+    <table>
+        <caption>
+            Optional Courses
+        </caption>
+        <thead>
+            <tr>
+                <td>Sr No</td>
+                <td>Department</td>
+                <td>Programme</td>
+                <td>Year</td>
+                <td>Semester</td>
+                <td>Course One</td>
+                <td>Course Two</td>
+                <td>Status</td>
+                <td>Action</td>
+            </tr>
+        </thead>
+        <tbody class="recordTable">
+            
+        </tbody>
+    </table>
+</div>
+
+<script>
+
+applyValidityChecker();
+
+async function populateOptionalCourse() {
+    var minimalData = await getPrerequisits('optionalcourse');
+    var crses = minimalData.responseBody.optionalcourses;
+
+    // Only optional courses that are not mapped yet
+    var optionalCourses = crses.filter(
+        crse => crse.ISOPTIONAL == true && crse.OPTIONAL_ID == null
+    );
+
+    // Store the courses so the change event can use them
+    $('#course1').data('optionalCourses', optionalCourses);
+
+    var options = optionalCourses
+        .map(crse => `
+            <option value="${crse.COURSE_ID}">
+                ${crse.DEPARTMENT_SHORT_NAME} -
+                ${crse.PROGRAMME_SHORT_NAME} -
+                Year ${crse.YEAR_NUMBER} -
+                ${crse.SEMESTER} -
+                ${crse.COURSE_FULL_NAME}
+            </option>
+        `)
+        .join('');
+
+    $('#course1')
+        .html(
+            '<option value="" disabled selected>Select Course</option>' +
+            options
+        )
+        .prop('disabled', false);
+
+    // Initially course2 has no courses until course1 is selected
+    $('#course2')
+        .html('<option value="" disabled selected>Select Course</option>')
+        .prop('disabled', true);
+}
+
+// When course1 changes
+$('#course1').on('change', function () {
+    var selectedCourseId = $(this).val();
+    var optionalCourses = $(this).data('optionalCourses') || [];
+
+    var selectedCourse = optionalCourses.find(
+        crse => String(crse.COURSE_ID) === String(selectedCourseId)
+    );
+
+    if (!selectedCourse) {
+        $('#course2')
+            .html('<option value="" disabled selected>Select Course</option>')
+            .prop('disabled', true);
+        return;
+    }
+
+    var matchingCourses = optionalCourses.filter(crse =>
+        String(crse.DEPARTMENT_ID) === String(selectedCourse.DEPARTMENT_ID) &&
+        String(crse.PROGRAMME_ID) === String(selectedCourse.PROGRAMME_ID) &&
+        String(crse.YEAR_NUMBER) === String(selectedCourse.YEAR_NUMBER) &&
+        String(crse.SEMESTER) === String(selectedCourse.SEMESTER) &&
+        String(crse.COURSE_ID) !== String(selectedCourse.COURSE_ID)
+    );
+
+    var options = matchingCourses
+        .map(crse => `
+            <option value="${crse.COURSE_ID}">
+                ${crse.DEPARTMENT_SHORT_NAME} -
+                ${crse.PROGRAMME_SHORT_NAME} -
+                Year ${crse.YEAR_NUMBER} -
+                ${crse.SEMESTER} -
+                ${crse.COURSE_FULL_NAME}
+            </option>
+        `)
+        .join('');
+
+    $('#course2')
+        .html(
+            '<option value="" disabled selected>Select Course</option>' +
+            options
+        )
+        .prop('disabled', matchingCourses.length === 0);
+});
+
+populateOptionalCourse();
+
+var form = document.getElementById('form');
+
+async function map_course() {
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    var formData = new FormData(form);
+    formData.append('formCategory', 'optionalcourse');
+    formData.append('formType', 'map_course');
+    timer = showLoader("Mapping Course");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createOptionalCourseTable();
+        populateOptionalCourse();
+    })
+    .fail(function(xhr) {
+        showInfoInline(
+            xhr.responseJSON?.responseBody ?? 'An unexpected error occurred.'
+        );
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function unmap_course(recordId) {
+    var formData = new FormData();
+    formData.append('formCategory', 'optionalcourse');
+    formData.append('formType', 'unmap_course');
+    formData.append('mainCourse', recordId);
+    timer = showLoader("Unmapping Course");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createOptionalCourseTable();
+        populateOptionalCourse();
+    })
+    .fail(function(xhr) {
+        showInfoInline(
+            xhr.responseJSON?.responseBody ?? 'An unexpected error occurred.'
+        );
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function createOptionalCourseTable() {
+    var result = await getPrerequisits('optionalcourse');
+    let courses = await result.responseBody.optionalcourses;
+    
+    var tbody = $('.recordTable');
+    tbody.empty();
+    if (!courses || courses.length === 0) {
+        tbody.append(`<tr><td colspan="9">No courses found.</td></tr>`);
+        return;
+    }
+
+    await courses.forEach((course, index) => {
+        tbody.append(`
+            <tr>
+                <td>${index + 1}</td>
+                <td>${course.DEPARTMENT_SHORT_NAME ?? ''}</td>
+                <td>${course.PROGRAMME_SHORT_NAME ?? ''}</td>
+                <td>${course.YEAR_NUMBER==1 ? "FIRST YEAR" : course.YEAR_NUMBER==2 ? "SECOND YEAR" : "THIRD YEAR"}</td>
+                <td>${course.SEMESTER}</td>
+                <td>${course.COURSE_SHORT_NAME ?? ''}</td>
+                <td>${course.OPTIONAL_COURSE_NAME ?? 'N.A.'}</td>
+                <td>${(course.OPTIONAL_COURSE_NAME == null)?
+                    `<span class="chip chip-red">Pending To Map</span>`:
+                    `<span class="chip chip-green">Mapped</span>`
+                }</td>
+                <td>
+                    <button
+                        class="btn primary"
+                        ${(course.OPTIONAL_COURSE_NAME == null) ? 'disabled' : ''}
+                        data-recordId="${course.COURSE_ID}"
+                        onclick="confirmDeleteDialog('Unmap ?', 'confirm the Unmap operations', ${course.COURSE_ID}, unmap_course);">
+                        Unmap
+                    </button>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+createOptionalCourseTable();
+turnOn();
+
+</script>

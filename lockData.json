@@ -1,0 +1,112 @@
+[
+    {
+        "sequence": 0,
+        "dataCount": 16,
+        "label": "Timeslot",
+        "module": "timeslot",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": false,
+        "viewReady": true
+    },
+    {
+        "sequence": 1,
+        "dataCount": 4,
+        "label": "Classroom",
+        "module": "classroom",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 2,
+        "dataCount": 1,
+        "label": "Department",
+        "module": "department",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 3,
+        "dataCount": 7,
+        "label": "Teacher",
+        "module": "teacher",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 4,
+        "dataCount": 1,
+        "label": "Programme",
+        "module": "programme",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 5,
+        "dataCount": 16,
+        "label": "Course",
+        "module": "course",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 6,
+        "dataCount": 2,
+        "label": "Optional Course",
+        "module": "optionalCourses",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 7,
+        "dataCount": 4,
+        "label": "Division",
+        "module": "division",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 8,
+        "dataCount": 2,
+        "label": "Map Optional Course",
+        "module": "optionalCoursesMapper",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    },
+    {
+        "sequence": 9,
+        "dataCount": 22,
+        "label": "Workload",
+        "module": "teacherWorkload",
+        "isLocked": true,
+        "isReady": true,
+        "isOngoing": false,
+        "isPending": true,
+        "viewReady": true
+    }
+]

@@ -1,0 +1,324 @@
+<!-- <button class="ghost" id="toggleform" onclick="toggleView();">Toggle Form</button> -->
+<div class="addnew-block" style="display: none;">
+    <p class="blockHeading">Map Optional Courses To Division</p>
+    <form id="form" onsubmit="" method="POST">
+        <fieldset>
+            <div>
+                <label for="optionGroup">Course Group</label>
+                <select class="dropdown" name="optionGroup" id="optionGroup" required disabled>
+                    <option value="" disabled selected>Loading</option>
+                </select>
+            </div>
+            <fieldset id="divisionMappingSection" style="border: none; padding: 0; margin: 0;">
+                <!-- Dynamically populated division fields appear here -->
+            </fieldset>
+        </fieldset>
+        <div class="btn-grp">
+            <button class="secondary btn" id="sndyBtn" onclick="resetForm(); populateOptionalCourseGroup();" type="button">
+                Clear
+            </button>
+            <button class="primary btn formSubmit" id="prmyBtn" onclick="map_course();" type="button">
+                Map
+            </button>
+        </div>
+    </form>
+</div>
+<hr>
+<div class="view-table">
+    <table>
+        <caption>
+            Optional Courses Division Mapping
+        </caption>
+        <thead>
+            <tr>
+                <td>Sr No</td>
+                <td>Department</td>
+                <td>Programme</td>
+                <td>Year</td>
+                <td>Semester</td>
+                <td>Course One (Division)</td>
+                <td>Course Two (Division)</td>
+                <td>Status</td>
+                <td>Action</td>
+            </tr>
+        </thead>
+        <tbody class="recordTable">
+            <!-- Dynamically populated records -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+applyValidityChecker();
+
+var form = document.getElementById('form');
+
+async function populateOptionalCourseGroup() {
+    var result = await getPrerequisits('optionalcoursemapper');
+    var courses = result.responseBody.optionalcourses || [];
+    
+    var optionalCourses = courses.filter(c => c.ISOPTIONAL == true && c.OPTIONAL_ID != null);
+    
+    $('#optionGroup').data('optionalCourses', optionalCourses);
+
+    var options = optionalCourses
+        .filter(course => Number(course.COURSE_ID) < Number(course.OPTIONAL_ID))
+        .map(course => {
+            var optionalCourse = courses.find(c => String(c.COURSE_ID) === String(course.OPTIONAL_ID));
+            if (!optionalCourse) return '';
+            
+            return `
+                <option
+                    value="${course.COURSE_ID}"
+                    data-course1-name="${course.COURSE_FULL_NAME}"
+                    data-course1-id="${course.COURSE_ID}"
+                    data-course2-name="${optionalCourse.COURSE_FULL_NAME}"
+                    data-course2-id="${optionalCourse.COURSE_ID}"
+                    data-programme-id="${course.PROGRAMME_ID}"
+                    data-year-number="${course.YEAR_NUMBER}"
+                >
+                    ${course.DEPARTMENT_SHORT_NAME} -:- 
+                    ${course.PROGRAMME_SHORT_NAME} -:- 
+                    Year ${course.YEAR_NUMBER} -:- 
+                    ${course.SEMESTER} -:- 
+                    {${course.COURSE_FULL_NAME} | ${optionalCourse.COURSE_FULL_NAME}}
+                </option>
+            `;
+        })
+        .join('');
+
+    $('#optionGroup')
+        .html('<option value="" disabled selected>Select Course Group</option>' + options)
+        .prop('disabled', true);
+        
+    $('#divisionMappingSection').empty();
+}
+
+$('#optionGroup').on('change', function () {
+    var option = $(this).find('option:selected');
+    createDivisionMappingSection(option);
+});
+
+async function createDivisionMappingSection(option) {
+    var course1Name = option.data('course1-name');
+    var course1Id = option.data('course1-id');
+    var course2Name = option.data('course2-name');
+    var course2Id = option.data('course2-id');
+    var programmeId = option.data('programme-id');
+    var yearNumber = option.data('year-number');
+
+    var result = await getPrerequisits('division');
+    var allDivisions = result.responseBody.divisions || [];
+    
+    var divisions = allDivisions.filter(div =>
+        String(div.PROGRAMME_ID) === String(programmeId) &&
+        String(div.YEAR_NUMBER) === String(yearNumber)
+    );
+
+    var divisionOptions = divisions
+        .map(div => `<option value="${div.DIVISION_ID}">${div.DIVISION_NAME}</option>`)
+        .join('');
+
+    var noDivisionOption = divisions.length === 0
+        ? `<option value="" disabled>No divisions available</option>`
+        : '';
+
+    $('#divisionMappingSection').html(`
+        <div>
+            <label for="course1Division">Course: ${course1Name}</label>
+            <input type="hidden" name="course1" id="course1" value="${course1Id}">
+            <select class="dropdown" name="division1" id="course1Division" required>
+                <option value="" disabled selected>Select Division</option>
+                ${divisionOptions}
+                ${noDivisionOption}
+            </select>
+        </div>
+        <div>
+            <label for="course2Division">Course: ${course2Name}</label>
+            <input type="hidden" name="course2" id="course2" value="${course2Id}">
+            <select class="dropdown" name="division2" id="course2Division" required>
+                <option value="" disabled selected>Select Division</option>
+                ${divisionOptions}
+                ${noDivisionOption}
+            </select>
+        </div>
+    `);
+}
+
+async function map_course() {
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    var formData = new FormData(form);
+    formData.append('formCategory', 'optionalcoursemapper');
+    formData.append('formType', 'map_course2division');
+    timer = showLoader("Mapping Course to Division");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        $('#divisionMappingSection').empty();
+        createOptionalCourseTable();
+        populateOptionalCourseGroup();
+        turnOff();
+    })
+    .fail(function(xhr) {
+        showInfoInline(xhr.responseJSON?.responseBody ?? 'An unexpected error occurred.');
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function unmap_course(courseId1) {
+    var formData = new FormData();
+    formData.append('formCategory', 'optionalcoursemapper');
+    formData.append('formType', 'unmap_course');
+    formData.append('courseId1', courseId1);
+    timer = showLoader("Un-Mapping Course to Division");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createOptionalCourseTable();
+        populateOptionalCourseGroup();
+    })
+    .fail(function(xhr) {
+        showInfoInline(xhr.responseJSON?.responseBody ?? 'An unexpected error occurred.');
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function createOptionalCourseTable() {
+    var result = await getPrerequisits('optionalcoursemapper');
+    var courses = await result.responseBody.optionalcourses || [];
+    var tbody = $('.recordTable');
+
+    tbody.empty();
+
+    if (courses.length === 0) {
+        tbody.append(`<tr><td colspan="9">No courses found.</td></tr>`);
+        return;
+    }
+
+    var uniquePairs = courses.filter(course =>
+        course.COURSE_ID &&
+        course.OPTIONAL_ID &&
+        Number(course.COURSE_ID) < Number(course.OPTIONAL_ID)
+    );
+
+    if (uniquePairs.length === 0) {
+        tbody.append(`<tr><td colspan="9">No optional course pairs found.</td></tr>`);
+        return;
+    }
+
+    await uniquePairs.forEach((course, index) => {
+        var course1Division = course.MAPPED_DIVISION_NAME ?? null;
+
+        var optionalCourse = courses.find(
+            c => String(c.COURSE_ID) === String(course.OPTIONAL_ID)
+        );
+
+        var course2Name =
+            optionalCourse?.COURSE_SHORT_NAME ??
+            optionalCourse?.COURSE_FULL_NAME ??
+            'N.A.';
+
+        var course2Division =
+            optionalCourse?.MAPPED_DIVISION_NAME ?? null;
+
+        var course1Display = `
+            <div>
+                <strong>${course.COURSE_SHORT_NAME ?? course.COURSE_FULL_NAME ?? ''}</strong>
+                <br>
+                <small>Division: ${course1Division ?? 'N.A.'}</small>
+            </div>
+        `;
+
+        var course2Display = `
+            <div>
+                <strong>${course2Name}</strong>
+                <br>
+                <small>Division: ${course2Division ?? 'N.A.'}</small>
+            </div>
+        `;
+
+        var isAllocated =
+            course1Division !== null &&
+            course1Division !== '' &&
+            course2Division !== null &&
+            course2Division !== '';
+
+        var status = isAllocated
+            ? `<span class="chip chip-green">Allotted</span>`
+            : `<span class="chip chip-red">Pending</span>`;
+
+        var action = isAllocated
+            ? `
+                <button
+                    class="btn primary"
+                    onclick="confirmDeleteDialog(
+                        'Unmap?',
+                        'Confirm the Unmap operation',
+                        ${course.COURSE_ID},
+                        unmap_course
+                    );">
+                    Unmap
+                </button>
+            `
+            : `
+                <button
+                    class="btn primary"
+                    onclick="$('#optionGroup')
+                        .val(${course.COURSE_ID})
+                        .trigger('change');
+                        turnOn();">
+                    Map
+                </button>
+            `;
+
+        var year =
+            course.YEAR_NUMBER == 1 ? "FIRST YEAR" :
+            course.YEAR_NUMBER == 2 ? "SECOND YEAR" :
+            course.YEAR_NUMBER == 3 ? "THIRD YEAR" :
+            course.YEAR_NUMBER == 4 ? "FOURTH YEAR" :
+            course.YEAR_NUMBER == 5 ? "FIFTH YEAR" :
+            course.YEAR_NAME ?? '';
+
+        tbody.append(`
+            <tr>
+                <td>${index + 1}</td>
+                <td>${course.DEPARTMENT_SHORT_NAME ?? ''}</td>
+                <td>${course.PROGRAMME_SHORT_NAME ?? ''}</td>
+                <td>${year}</td>
+                <td>${course.SEMESTER ?? ''}</td>
+                <td>${course1Display}</td>
+                <td>${course2Display}</td>
+                <td>${status}</td>
+                <td>${action}</td>
+            </tr>
+        `);
+    });
+}
+
+populateOptionalCourseGroup();
+createOptionalCourseTable();
+</script>

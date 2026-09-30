@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="src/style.css">
+    <script src="jquery-4.0.0.min.js"></script>
+    <title>Home</title>
+</head>
+<body>
+    <div class="appBody" style="overflow-y: auto;">
+    <main>
+        <header>
+            <div class="user" id="user">fetching...</div>
+            <div class="header-tag">
+                <button class="btn secondary" onclick="navTo('dashboard')" >Dashboard</button>
+                <select id="navigator" class="navigator dropdown" on name="" id="" hidden>
+                    <option id="dashboard" value="" data-loc="sections/dashboard.html" selected>Dashboard</option>
+                    <option id="timeslot" value="" data-loc="sections/timeslot.html">Timeslot</option>
+                    <option id="classroom" value="" data-loc="sections/classroom.html">Classrooms</option>
+                    <option id="department" value="" data-loc="sections/department.html">Departments</option>
+                    <option id="teacher" value="" data-loc="sections/teacher.html">Teachers</option>
+                    <option id="programme" value="" data-loc="sections/programme.html">Programmes</option>
+                    <option id="course" value="" data-loc="sections/course.html">Courses</option>
+                    <option id="optionalCourse" value="" data-loc="sections/optionalCourses.html">Optional Courses</option>
+                    <option id="division" value="" data-loc="sections/division.html">Divisions</option>
+                    <option id="optionalCoursesMapper" value="" data-loc="sections/optionalCoursesMapper.html">Optional Courses Mapper</option>
+                    <option id="teacherWorkload" value="" data-loc="sections/teacherWorkload.html">Teacher Workload</option>
+                    <option id="timetable" value="" data-loc="sections/timetable.html">Timetable</option>
+                </select>
+            </div>
+            <div class="header-menu">
+                <button type="submit" id="timetableBtn" class="btn secondary" onclick="navTo('timetable')" disabled>Timetable</button>
+                <button type="submit" id="logoutButton" class="btn secondary critical">logout</button>
+            </div>
+        </header>
+        <div id="MainContents"></div>
+        <div id="load_wrapper" hidden>
+            <div id="loader_container">
+                
+                <p id="loader"></p>
+                <div>
+                    <p id="loader_data">Loading timeslot</p>
+                    <p style="text-align: center;">(<span id="loader_time">0</span> Seconds)</p>
+                </div>
+            </div>
+        </div>
+    </main>
+    </div>
+</body>
+<script src="https://kit.fontawesome.com/1042c9c102.js" crossorigin="anonymous"></script>
+<script>
+    let timer;
+    var logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async function () {
+            try {
+                var response = await fetch('auth.php?action=logout', {
+                    method: 'post', // or POST depending on how you trigger it
+                    credentials: 'same-origin'
+                });
+                
+                var data = await response.json();
+                if (response.ok && data.responseBody) {
+                    window.location.href = data.responseBody;
+                } else {
+                    throw new Error('Logout failed');
+                }
+            } catch (error) {
+                console.error('Error during logout:', error);
+            }
+        });
+    }
+    async function checkTimetableAccess() {
+        $.ajax({
+            url: 'api.php',
+            type: 'POST',
+            data: { formCategory: 'dashboard', formType: 'get_dashboard' },
+            dataType: 'json'
+        }).done(function(response) {
+            if (response && response.responseBody) {
+                var modules = response.responseBody;
+                // Verify all modules (0 through 9) are locked
+                var allLocked = modules.every(m => m.isLocked === true);
+                var btn = $('#timetableBtn');
+                var oldBtnState = btn.prop("disabled");
+                if (allLocked) {
+                    btn.prop('disabled', false).css({ 'opacity': '1', 'pointer-events': 'auto' });
+                    if(oldBtnState != btn.prop("disabled")) showInfoInline("Timetable module Unlocked");
+                } else {
+                    btn.prop('disabled', true).css({ 'opacity': '0.5', 'pointer-events': 'none' });
+                    if(oldBtnState != btn.prop("disabled")){
+                        showInfoInline("Timetable module Locked");
+                        
+                    }
+
+                }
+            }
+        });
+    }
+    $(document).ready(function(){
+        checkLogin();
+        $("#MainContents").load('sections/dashboard.html');
+        checkTimetableAccess();
+        $(".navigator").change(
+            function () {
+                checkLogin();
+                var currentlyViewing = $(".navigator>option:selected").attr("data-loc");
+                $("#MainContents").load(currentlyViewing);
+            }
+        );
+        
+    });
+    
+    async function navTo(module) {
+        // timer = showLoader("Loading "+ module);
+        $("#MainContents").load("sections/" + module +".html");
+        // hideLoader(timer);
+    }
+
+    async function checkLogin(){
+        // console.log("Checking valid login..");
+        var formData = new FormData();
+        formData.append('action', 'status');
+        $.ajax({
+            url: 'auth.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json'
+        })
+        .done(function(result) {
+            if (result.loggedIn) {
+                // console.log("Valid Login");
+                document.getElementById('user').innerText = '@' + result.username;
+                // showInfoInline("Logged In");
+            } else {
+                // console.log("Invalid Login");
+                localStorage.clear();
+                sessionStorage.clear();
+                history.replaceState(null, '', window.location.href); // Wipes out history.state data
+                window.location.reload();
+                window.location.href = "./login.html";
+            }
+        });
+    }
+
+    async function load_existing(tablename){
+        var formData = new FormData();
+        formData.append('formCategory', 'load_existing');
+        formData.append('tablename', tablename);
+        timer = showLoader("Fetching Data");
+        var result = await $.ajax({
+            url: 'api.php',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false
+        })
+        .always(function() {
+            hideLoader(timer);
+        });
+        return result;
+    }
+    
+    async function confirmDeleteDialog(heading, description, recordId, callback) {
+        var popup = $(`
+            <div class="tempPopup dull-bg">
+                <div class="dialog dialog-question">
+                    <p class="dialog-heading">${heading}</p>
+                    <p class="dialog-description">${description}</p>
+                    <div class="dialog-button-group">
+                        <button class="btn secondary cancel-btn">Cancel</button>
+                        <button class="btn primary confirm-btn">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        `);
+        $('body').append(popup);
+        popup.find('.cancel-btn').click(() => {
+            popup.remove();
+        });
+        popup.find('.confirm-btn').click(async () => {
+            popup.remove();
+            await callback(recordId);
+        });
+    }
+    
+    function getView(form){
+        if(form.css('display')=='none') return false
+        return true
+    }
+    function turnOn(){
+        $('.addnew-block').css('display','block');
+        document.getElementsByClassName('addnew-block')[0].scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' // Options: 'start', 'center', 'end', or 'nearest'
+        });
+    }
+    function turnOff(){$('.addnew-block').css('display','none');}
+    function toggleView(){
+        var form = $('.addnew-block');
+        if(getView(form)){
+            form.css('display','none');
+        }else{
+            form.css('display','block');
+        }  
+    } 
+    function showInfoInline(infoBody, timeInSec = 5) {
+        // Remove previous toast to avoid stacking
+        $('#formInfoLine').remove();
+
+        // Small compact element
+        var info = $(`
+            <p id="formInfoLine">
+                <i class="fa-solid fa-circle-info" style="color: #60a5fa; font-size: 14px;"></i>
+                <span>${infoBody}</span>
+            </p>
+        `);
+
+        $('#MainContents').append(info);
+
+        setTimeout(() => {
+            info.fadeOut(250, function() {
+                $(this).remove();
+            });
+        }, timeInSec * 1000);
+
+        hideLoader(timer);
+    }
+    function showLoader(data){
+        // console.log(event);
+        clearInterval(timer);
+        $("#loader_data").empty().append(data);
+        $("#load_wrapper").prop('hidden',false);
+        elapsedtime = setInterval(function(){
+            $("#loader_time").text(
+                Number(
+                    $("#loader_time").text()
+                )+1
+            )
+        },1000);
+        return elapsedtime;
+    }
+    function hideLoader(timer = elapsedtime){
+        $("#load_wrapper").prop('hidden',true);
+        $("#loader_data").empty();
+        $("#loader_time").text(0);
+        clearInterval(timer);
+    }  
+    function resetForm(){
+        turnOff();
+    }
+    async function getPrerequisits(tablename){
+        var formData = new FormData();
+            formData.append('formCategory', 'getMinimalData');
+            formData.append('formType', tablename);
+            timer = showLoader("Fetching Data From Server");
+            var result = await $.ajax({
+                url: 'api.php',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false
+            })
+            .always(function(){
+                hideLoader(timer);
+            });
+            // console.log(result);
+            return result;
+    }
+    function applyValidityCheckerDEPRECIATED() {
+        var form = document.querySelector('form');
+        var submitButton = document.querySelector('.formSubmit');
+        function updateSubmitButton() {
+            submitButton.disabled = !form.checkValidity();
+        }
+        form.querySelectorAll('input, select, textarea').forEach(input => {
+            input.addEventListener('blur', (e) => {
+                if (!e.target.checkValidity()) {
+                    e.target.reportValidity();
+                }
+                updateSubmitButton();
+            });
+            input.addEventListener('input', updateSubmitButton);
+            input.addEventListener('change', updateSubmitButton);
+        });
+        updateSubmitButton();
+    }
+    function applyValidityCheckerV2() {
+        var form = document.querySelector('form');
+        if (!form) {
+            console.warn('Form not found');
+            return;
+        }
+        var submitButton = form.querySelector('.formSubmit');
+        if (!submitButton) {
+            console.warn('Submit button .formSubmit not found');
+            return;
+        }
+        function updateSubmitButton() {
+            submitButton.disabled = !form.checkValidity();
+        }
+        form.querySelectorAll('input, select, textarea').forEach(input => {
+            input.addEventListener('blur', (e) => {
+                if (!e.target.checkValidity()) {
+                    e.target.reportValidity();
+                }
+                updateSubmitButton();
+            });
+            input.addEventListener('input', updateSubmitButton);
+            input.addEventListener('change', updateSubmitButton);
+        });
+        updateSubmitButton();
+    }
+    function applyValidityChecker() {
+        var form = document.querySelector('form');
+        if (!form) {
+            console.warn('Form not found');
+            return;
+        }
+        var submitButton = form.querySelector('.formSubmit');
+        if (!submitButton) {
+            console.warn('Submit button .formSubmit not found');
+            return;
+        }
+
+        function updateSubmitButton() {
+            submitButton.disabled = !form.checkValidity();
+        }
+
+        // Use jQuery event delegation on the form to handle dynamically added fields automatically
+        $(form)
+            .off('.validityChecker')
+            .on('input.validityChecker change.validityChecker', 'input, select, textarea', function() {
+                updateSubmitButton();
+            })
+            .on('blur.validityChecker', 'input, select, textarea', function(e) {
+                if (!this.checkValidity()) {
+                    this.reportValidity();
+                }
+                updateSubmitButton();
+            });
+
+        updateSubmitButton();
+    }
+    checkLogin();
+
+    window.addEventListener('visibilitychange',()=>{checkLogin();})
+</script>
+</html>

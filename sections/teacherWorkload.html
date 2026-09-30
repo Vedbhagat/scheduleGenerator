@@ -1,0 +1,363 @@
+<button class="ghost" id="toggleform" onclick="toggleView();">Toggle Form</button>
+<div class="addnew-block" style="display: none;">
+    <p class="blockHeading">Add New Teacher workload</p>
+    <form id="form" onsubmit="" method="POST">
+        <fieldset>
+            <div>
+                <label>Department</label>
+                <select class="dropdown inp-w-base" name="departmentId" id="departmentId" required onchange="populateProgramme(this); populateTeacher(this)">
+                    <option value="" disabled selected>Select Department</option>
+                </select>
+            </div>
+            <fieldset>
+                <div>
+                    <label>Programme</label>
+                    <select class="dropdown inp-w-base" name="programmeId" id="programmeId" disabled required onchange="populateYear(this)">
+                        <option value="" disabled selected>Select Programme</option>
+                    </select>
+                </div>
+                <div>
+                    <div>
+                        <label>Year</label>
+                        <select class="dropdown inp-w-base" name="yearId" id="yearId" disabled required onchange="populateDivision(this)">
+                            <option value="" disabled selected>Select Year</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Division</label>
+                        <select class="dropdown inp-w-base" name="divisionId" id="divisionId" disabled required onchange="populateCourse()">
+                            <option value="" disabled selected>Select Division</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label>Semester</label>
+                    <div class="radiobuttonGroup">
+                        <div>
+                            <input type="radio" name="isEven" id="odd" value="false" checked onchange="populateCourse()">
+                            <label for="odd">Odd</label>
+                        </div>
+                        <div>
+                            <input type="radio" name="isEven" id="even" value="true" onchange="populateCourse()">
+                            <label for="even">Even</label>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset>
+                <div>
+                    <label>Teacher</label>
+                    <select class="dropdown inp-w-base" name="teacherId" id="teacherId" disabled required>
+                        <option value="" disabled selected>Select Teacher</option>
+                    </select>
+                </div>
+            </fieldset>
+            <fieldset>
+                <div>
+                    <label>Course</label>
+                    <select class="dropdown inp-w-base" name="courseId" id="courseId" disabled required>
+                        <option value="" disabled selected>Select Course</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Number of Lectures</label>
+                    <input type="number" name="lectureCount" id="lectureCount" value="4" min="1" max="6" required title="The number must be between 1-6">
+                </div>
+            </fieldset>
+        </fieldset>
+        <div class="btn-grp">
+            <button class="secondary btn" onclick="resetForm();" type="button">Clear</button>
+            <button class="primary btn formSubmit" onclick="create_workload();" type="button">Map</button>
+        </div>
+    </form>
+</div>
+<hr>
+<div class="view-table">
+    <table>
+        <caption>
+            Existing Workloads
+        </caption>
+        <thead>
+            <tr>
+                <td>sr no</td>
+                <td>Department</td>
+                <td>Programme</td>
+                <td>Year</td>
+                <td>Division</td>
+                <td>Semester</td>
+                <td>Course</td>
+                <td>Teacher</td>
+                <td>Lectures</td>
+                <td>Actions</td>
+            </tr>
+        </thead>
+        <tbody class="recordTable">
+            
+        </tbody>
+    </table>
+</div>
+
+<script>
+applyValidityChecker();
+
+async function populateDepartment() {
+    var minimalData = await getPrerequisits('department');
+    var depts = minimalData.responseBody.departments || [];
+    var departmentSelect = $('#departmentId');
+    departmentSelect.empty().append(`<option value='' disabled selected>Select Department</option>`);
+    depts.forEach(dept => {
+        departmentSelect.append(`
+            <option value="${dept.DEPARTMENT_ID}">
+                ${dept.LONG_NAME}
+            </option>
+        `);
+    });
+    departmentSelect.prop('disabled', false);
+}
+
+async function populateProgramme(select) {
+    var chosenDepartment = select.value;
+    var minimalData = await getPrerequisits('programme');
+    var pgrms = minimalData.responseBody.programmes || [];
+    var programmeSelect = $('#programmeId');
+    programmeSelect.empty().append('<option value="" disabled selected>Select Programme</option>');
+    pgrms.forEach(pgrm => {
+        if (String(pgrm.DEPARTMENT_ID) === String(chosenDepartment)) {
+            programmeSelect.append(
+                `<option value="${pgrm.PROGRAMME_ID}">
+                    ${pgrm.LONG_NAME}
+                </option>`
+            );
+        }
+    });
+    programmeSelect.prop('disabled', false);
+}
+
+async function populateYear(select) {
+    var chosenProgramme = select.value;
+    var minimalData1 = await getPrerequisits('consists');
+    var consists = minimalData1.responseBody.consists || [];
+    var minimalData2 = await getPrerequisits('year');
+    var years = minimalData2.responseBody.years || [];
+    var yearSelect = $('#yearId');
+    yearSelect.empty().append(`<option value='' disabled selected>Select Year</option>`);
+    consists.forEach(consist => {
+        if (consist.PROGRAMME_ID == chosenProgramme) {
+            var year = years.find(y => y.YEAR_NUMBER == consist.YEAR_NUMBER);
+            if (year) {
+                yearSelect.append(`
+                    <option value="${year.YEAR_NUMBER}">
+                        ${year.YEAR_NAME}
+                    </option>
+                `);
+            }
+        }
+    });
+    yearSelect.prop('disabled', false);
+}
+
+async function populateTeacher(select) {
+    var chosenDepartment = select.value;
+    var minimalData = await load_existing('teacher');
+    var tchrs = minimalData.responseBody || [];
+    var teacherSelect = $('#teacherId');
+    teacherSelect.empty().append('<option value="" disabled selected>Select Teacher</option>');
+    tchrs.forEach(tchr => {
+        if (String(tchr[1]) === String(chosenDepartment)) {
+            teacherSelect.append(
+                `<option value="${tchr[0]}">
+                    ${tchr[2]} ${tchr[3]}
+                </option>`
+            );
+        }
+    });
+    teacherSelect.prop('disabled', false);
+}
+
+async function populateDivision(select) {
+    var chosenDepartment = $('#departmentId').val();
+    var chosenProgramme = $('#programmeId').val();
+    var chosenYear = $(select).val();
+    var result = await getPrerequisits('division');
+    var divisions = result?.responseBody?.divisions ?? [];
+    var divisionSelect = $('#divisionId');
+    divisionSelect.empty();
+
+    var filteredDivisions = divisions.filter(division =>
+        String(division.DEPARTMENT_ID) === String(chosenDepartment) &&
+        String(division.PROGRAMME_ID) === String(chosenProgramme) &&
+        String(division.YEAR_NUMBER) === String(chosenYear)
+    );
+
+    var divisionIds = filteredDivisions.map(division => Number(division.DIVISION_ID));
+    divisionSelect.append(`
+        <option value='${JSON.stringify(divisionIds)}' selected>
+            All
+        </option>
+    `);
+
+    filteredDivisions.forEach(division => {
+        divisionSelect.append(`
+            <option value="${division.DIVISION_ID}">
+                ${division.DIVISION_NAME}
+            </option>
+        `);
+    });
+
+    divisionSelect.prop('disabled', false);
+    populateCourse();
+}
+
+async function populateCourse() {
+    var minimalData = await getPrerequisits('course');
+    var courses = minimalData.responseBody.courses || [];
+    var programmeId = $('#programmeId').val();
+    var yearId = $('#yearId').val();
+    var isEven = $('#even').prop('checked');
+    var semester = isEven ? 'EVEN' : 'ODD';
+    
+    var courseSelect = $('#courseId');
+    courseSelect.empty().append('<option value="" disabled selected>Select Course</option>');
+
+    courses.forEach(course => {
+        if (String(course.PROGRAMME_ID) === String(programmeId) &&
+            String(course.YEAR_NUMBER) === String(yearId) &&
+            String(course.SEMESTER).toUpperCase() === semester) {
+
+            courseSelect.append(`
+                <option value="${course.COURSE_ID}">
+                    ${course.LONG_NAME} (${course.WEEKLY_LECTURES})
+                </option>
+            `);
+        }
+    });
+    courseSelect.prop('disabled', false);
+}
+
+populateDepartment();
+
+var form = document.getElementById('form');
+
+async function create_workload() {
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    var formData = new FormData(form);
+    formData.append('formCategory', 'workload');
+    formData.append('formType', 'create_workload');
+    timer = showLoader("Adding new Workload");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createWorkloadTable();
+    })
+    .fail(function(xhr) {
+        showInfoInline(
+            xhr.responseJSON?.responseBody ?? 'An unexpected error occurred.'
+        );
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function delete_workload(recordId) {
+    var formData = new FormData();
+    formData.append('formCategory', 'workload');
+    formData.append('formType', 'delete_workload');
+    formData.append('workloadId', recordId);
+    timer = showLoader("Deleting Workload");
+    $.ajax({
+        url: 'api.php',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        dataType: 'json'
+    })
+    .done(function(result) {
+        showInfoInline(result.responseBody);
+        form.reset();
+        createWorkloadTable();
+    })
+    .fail(function(xhr) {
+        showInfoInline(
+            xhr.responseJSON?.responseBody ?? 'An unexpected error occurred.'
+        );
+    })
+    .always(function() {
+        hideLoader(timer);
+    });
+}
+
+async function createWorkloadTable() {
+    try {
+        var result = await getPrerequisits('workload');
+        var teaches = await result?.responseBody?.teaches ?? [];
+
+        var tbody = $('.recordTable');
+        tbody.empty();
+
+        if (teaches.length === 0) {
+            tbody.append(`
+                <tr>
+                    <td colspan="10" style="text-align: center;">
+                        No Workload found.
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        await teaches.forEach((teach, index) => {
+            tbody.append(`
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${teach.DEPARTMENT_NAME ?? ''}</td>
+                    <td>${teach.PROGRAMME_NAME ?? ''}</td>
+                    <td>${teach.YEAR_NAME ?? ''}</td>
+                    <td>${teach.DIVISION_NAME ?? ''}</td>
+                    <td>${teach.SEMESTER ?? ''}</td>
+                    <td>${teach.COURSE_NAME ?? ''}</td>
+                    <td>${teach.TEACHER_NAME ?? ''}</td>
+                    <td>${teach.LECTURE_COUNT ?? 0}</td>
+                    <td>
+                        <button
+                            class="btn primary"
+                            data-workloadId="${teach.WORKLOAD_ID}"
+                            onclick="confirmDeleteDialog(
+                                'Delete Workload?',
+                                'Confirm the delete operation',
+                                ${teach.WORKLOAD_ID},
+                                delete_workload
+                            );">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+
+    } catch (error) {
+        console.error('createWorkloadTable error:', error);
+        $('.recordTable').html(`
+            <tr>
+                <td colspan="10" style="text-align: center;">
+                    Error loading workload.
+                </td>
+            </tr>
+        `);
+    }
+}
+
+createWorkloadTable();
+</script>
