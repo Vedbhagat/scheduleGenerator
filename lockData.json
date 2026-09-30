@@ -1,112 +1,112 @@
 [
     {
         "sequence": 0,
-        "dataCount": 16,
+        "dataCount": 0,
         "label": "Timeslot",
         "module": "timeslot",
-        "isLocked": true,
-        "isReady": true,
-        "isOngoing": false,
+        "isLocked": false,
+        "isReady": false,
+        "isOngoing": true,
         "isPending": false,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 1,
-        "dataCount": 4,
+        "dataCount": 0,
         "label": "Classroom",
         "module": "classroom",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 2,
-        "dataCount": 1,
+        "dataCount": 0,
         "label": "Department",
         "module": "department",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 3,
-        "dataCount": 7,
+        "dataCount": 0,
         "label": "Teacher",
         "module": "teacher",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 4,
-        "dataCount": 1,
+        "dataCount": 0,
         "label": "Programme",
         "module": "programme",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 5,
-        "dataCount": 16,
+        "dataCount": 0,
         "label": "Course",
         "module": "course",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 6,
-        "dataCount": 2,
+        "dataCount": 0,
         "label": "Optional Course",
         "module": "optionalCourses",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 7,
-        "dataCount": 4,
+        "dataCount": 0,
         "label": "Division",
         "module": "division",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 8,
-        "dataCount": 2,
+        "dataCount": 0,
         "label": "Map Optional Course",
         "module": "optionalCoursesMapper",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     },
     {
         "sequence": 9,
-        "dataCount": 22,
+        "dataCount": 0,
         "label": "Workload",
         "module": "teacherWorkload",
         "isLocked": true,
-        "isReady": true,
+        "isReady": false,
         "isOngoing": false,
         "isPending": true,
-        "viewReady": true
+        "viewReady": false
     }
 ]
