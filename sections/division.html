@@ -6,29 +6,29 @@
             <fieldset disabled>
                 <div>
                     <select class="dropdown myInput" name="departmentId" id="departmentId" onchange="populateProgramme(this)" required>
-                        <option value="" disabled selected>Select Department</option>
+                        <option value="" disabled selected>Loading Department</option>
                     </select>
                 </div>
                 <div>
                     <select class="dropdown myInput" name="programmeId" id="programmeId" onchange="populateYear(this)" required>
-                        <option value="" disabled selected>Select Programme</option>
+                        <option value="" disabled selected>Loading Programme</option>
                     </select>
                 </div>
                 <div>
                     <select class="dropdown myInput" name="yearId" id="yearId" onchange="populateDivision(this)" required>
-                        <option value="" disabled selected>Select Year</option>
+                        <option value="" disabled selected>Loading Year</option>
                     </select>
                 </div>
             </fieldset>
             <fieldset>
                 <div>
                     <select class="dropdown myInput" name="divisionId" id="divisionId" required>
-                        <option value="" disabled selected>Select Division</option>
+                        <option value="" disabled selected>Loading Division</option>
                     </select>
                 </div>
                 <div>
                     <label for="studentCount">Student Count</label>
-                    <input type="number" name="studentCount" id="studentCount" value="20" min="20" max="200" title="The Student count must be between 20 to 200" onchange="populateClassroom(-1)" required>
+                    <input type="number" name="studentCount" id="studentCount" value="60" min="20" max="200" title="The Student count must be between 20 to 200" onchange="populateClassroom(-1)" required>
                 </div>
             </fieldset>
             <fieldset>
@@ -42,7 +42,7 @@
                 </legend>
                 <div>
                     <select class="dropdown myInput" name="classroomId" id="classroomId">
-                        <option value="" disabled selected>Select Room Number</option>
+                        <option value="" disabled selected>Loading Room Number</option>
                     </select>
                 </div>
                 <fieldset>
@@ -63,7 +63,7 @@
                         </div>
                         <div>
                             <select name="timeBound" id="timeBound" class="dropdown myInput">
-                                <option disabled selected>Select time</option>
+                                <option disabled selected>Loading time</option>
                             </select>
                         </div>
                     </fieldset>    
@@ -186,7 +186,6 @@ async function populateDivision(select) {
             `);
         });
 
-        divisionSelect.prop('disabled', false);
 
     } catch (error) {
         console.error('populateDivision error:', error);

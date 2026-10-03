@@ -8,7 +8,7 @@
             <div>
                 <label for="departmentId">*Department</label>
                 <select class="dropdown myInput" name="departmentId" id="departmentId" required disabled>
-                    <option value="" disabled selected>Select Department</option>
+                    <option value="" disabled selected>Loading Department</option>
                 </select>
             </div>
         </fieldset>
@@ -91,6 +91,7 @@ async function populateDepartment() {
     var departmentSelect = $('#departmentId');
 
     departmentSelect.find('option:not(:first)').remove();
+    departmentSelect.empty().append('<option value="" disabled selected>Select Department</option>');
     depts.forEach(dept => {
         departmentSelect.append(`<option value="${dept.DEPARTMENT_ID}">${dept.LONG_NAME}</option>`);
     });
@@ -202,6 +203,7 @@ async function prefillUpdateform(recordId) {
 function cancelPrefilledUpdateform() {
     form.reset();
     $('#programmeId').val('');
+    // $('#departmentId').prop('disabled', false);
     $('#ThirdYear').prop('checked', true);
     createDivisionInputs(3);
 

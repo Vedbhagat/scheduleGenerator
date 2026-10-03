@@ -12,19 +12,19 @@
             <div>
                 <label>Department</label>
                 <select class="dropdown inp-w-base" name="departmentId" id="departmentId" required onchange="populateProgramme(this)">
-                    <option value="" disabled selected>Select Department</option>
+                    <option value="" disabled selected>Loading Department</option>
                 </select>
             </div>
             <div>
                 <label>Programme</label>
                 <select class="dropdown inp-w-base" name="programmeId" id="programmeId" disabled required onchange="populateYear(this)">
-                    <option value="" disabled selected>Select Programme</option>
+                    <option value="" disabled selected>Loading Programme</option>
                 </select>
             </div>
             <div>
                 <label>Year</label>
                 <select class="dropdown inp-w-base" name="yearId" id="yearId" disabled required onchange="populateOptionalCourse(this)">
-                    <option value="" disabled selected>Select Year</option>
+                    <option value="" disabled selected>Loading Year</option>
                 </select>
             </div>
             <div>
@@ -76,7 +76,7 @@
             </div>
             <div>
                 <span><label for="lectureCount">Number of lectures in a week</label></span>
-                <input name="lectureCount" id="lectureCount" type="number" min="1" max="6" required>
+                <input name="lectureCount" id="lectureCount" type="number" min="1" max="6" value="2" required>
             </div>
         </fieldset>
         <fieldset>      
@@ -87,7 +87,7 @@
             </div>
             <div>
                 <select class="dropdown inp-w-base" name="optionalCourseId" id="optionalCourseId" disabled>
-                    <option value="" disabled selected>Select Course Optional With</option>
+                    <option value="" disabled selected>Loading Optional Courses</option>
                 </select>
             </div>
         </fieldset>
@@ -268,13 +268,18 @@ async function get_one_course(courseId){
 async function prefillUpdateform(recordId) {
     var oldData = await get_one_course(recordId);
     var parsedOldData = await oldData.responseBody;
+    
     turnOn();
+    
     $('#courseId').val(parsedOldData.COURSE_ID);
     $('#fullname').val(parsedOldData.LONG_NAME);
     $('#shortname').val(parsedOldData.SHORT_NAME);
-    if(parsedOldData.SEMESTER == "ODD") $("#odd").prop("checked", true);
-    else if(parsedOldData.SEMESTER == "EVEN") $("#even").prop("checked", true);
+    
+    if (parsedOldData.SEMESTER == "ODD") $("#odd").prop("checked", true);
+    else if (parsedOldData.SEMESTER == "EVEN") $("#even").prop("checked", true);
+    
     $('#lectureCount').val(parsedOldData.WEEKLY_LECTURES);
+    
     if (Number(parsedOldData.ISPRACTICAL) === 1) {
         $('#isPractical').prop('checked', true);
         $('#isLecture').prop('checked', false);
@@ -282,24 +287,21 @@ async function prefillUpdateform(recordId) {
         $('#isLecture').prop('checked', true);
         $('#isPractical').prop('checked', false);
     }
-    $('#isOptional').prop(
-        'checked',
-        Number(parsedOldData.ISOPTIONAL) === 1
-    );
+    
+    $('#isOptional').prop('checked', Number(parsedOldData.ISOPTIONAL) === 1);
+    
     if (Number(parsedOldData.ISOPTIONAL) === 1) {
         $('#optionalCourseId').prop('disabled', false);
     } else {
         $('#optionalCourseId').prop('disabled', true);
         $('#optionalCourseId').val('');
     }
-
-    $('#departmentId').prop('disabled', false);
     $('#departmentId').val(parsedOldData.DEPARTMENT_ID);
+    $('#departmentId').prop('disabled', true);
     await populateProgramme($('#departmentId')[0]);
     $('#programmeId').val(parsedOldData.PROGRAMME_ID);
     await populateYear($('#programmeId')[0]);
     $('#yearId').val(parsedOldData.YEAR_NUMBER);
-
     $('#prmyBtn')
         .text('Update')
         .attr('data-recordId', parsedOldData.COURSE_ID)
@@ -356,6 +358,9 @@ function cancelPrefilledUpdateform() {
     $('#isLecture').prop('selected', false);
     $('#isPractical').prop('selected', false);
     $('#isOptional').prop('selected', false);
+    $('#yearId').prop('disabled', true);
+    $('#programmeId').prop('disabled', true);
+    $('#departmentId').prop('disabled', false);
 
     $('#prmyBtn')
         .text('Create')

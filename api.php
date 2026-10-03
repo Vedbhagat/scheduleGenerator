@@ -542,7 +542,7 @@ try {
             }
             else{
                 if($sequence == 0){
-                    sendJsonResponse(422, "Cannot Lock","Cannot Lock Timeslot. There must exist atleast one Department.");
+                    sendJsonResponse(422, "Cannot Lock","Cannot Lock Timeslot. There must exist atleast one Timeslot.");
                 }
                 elseif($sequence == 1){
                     sendJsonResponse(422, "Cannot Lock","Cannot Lock Classroom. The capcity of all the classrooms must be filled.");
@@ -569,7 +569,7 @@ try {
                     sendJsonResponse(422, "Cannot Lock","Cannot Lock Map Optional Course Group. All the optional courses must be mapped to a division(s).");
                 }
                 elseif($sequence == 9){
-                    sendJsonResponse(422, "Cannot Lock","Cannot Lock Workload. UNDEFINDE error.");
+                    sendJsonResponse(422, "Cannot Lock","Cannot Lock Workload. UNDEFINED error.");
                 }
                 else{
                     sendJsonResponse(400,"?","???");
@@ -727,7 +727,7 @@ try {
             $capacity = $_POST['capacity'] ?? '';
             $startTime = $_POST['startTime'] ?? '';
             $endTime = $_POST['endTime'] ?? '';
-            $roomType = ($_POST['roomType']) ?? '';
+            $roomType = ($_POST['roomType']) ?? 'LECTURE_HALL';
             
             $isValid = validateClassroom($floor, $room, $capacity, $startTime, $endTime);
             if ($isValid === 1) {
@@ -3532,8 +3532,8 @@ try {
             }
             $meta = $metaQuery->fetch_assoc();
 
-            // Fetch timeslots, excluding BREAK slots
-            $slotQuery = $conn->execute_query("SELECT SLOT_ID, START_TIME, END_TIME, SLOT_TYPE FROM TIMESLOT WHERE SLOT_TYPE != 'BREAK' ORDER BY START_TIME ASC");
+            // MINIMAL CHANGE: Fetch ONLY lecture slots so practicals span across them instead of getting their own column
+            $slotQuery = $conn->execute_query("SELECT SLOT_ID, START_TIME, END_TIME, SLOT_TYPE FROM TIMESLOT WHERE SLOT_TYPE = 'LECTURE' ORDER BY START_TIME ASC");
             $lectureSlots = [];
             while ($s = $slotQuery->fetch_assoc()) { 
                 $lectureSlots[] = $s; 
@@ -3986,96 +3986,6 @@ try {
                 echo '</Table>';
                 echo '</Worksheet>';
             }
-            /*
-            // =========================================================================
-            // --- 3. EXISTING CLASSROOM ALLOCATIONS WORKSHEET (PRESERVED) ---
-            // =========================================================================
-            echo '<Worksheet ss:Name="Classrooms">';
-            echo '<Table>';
-            echo '<Column ss:Width="120"/>'; // Room No
-            echo '<Column ss:Width="100"/>'; // Weekday
-
-            foreach ($allTimeslots as $slot) {
-                echo '<Column ss:Width="200"/>';
-            }
-
-            $clsRes = $conn->execute_query("
-                SELECT cr.CLASSROOM_ID, cr.ROOM_NUMBER
-                FROM CLASSROOM cr
-                ORDER BY cr.ROOM_NUMBER
-            ");
-
-            $clsSchedRes = $conn->execute_query("
-                SELECT tt.CLASSROOM_ID, tt.SLOT_ID, tt.WEEKDAY,
-                       c.SHORT_NAME AS COURSE_SHORT_NAME, y.YEAR_NAME,
-                       p.SHORT_NAME AS PROGRAMME_NAME, dv.NAME AS DIVISION_NAME
-                FROM TIMETABLE tt
-                JOIN COURSE c ON tt.COURSE_ID = c.COURSE_ID
-                JOIN DIVISION dv ON tt.DIVISION_ID = dv.DIVISION_ID
-                JOIN PROGRAMME p ON dv.PROGRAMME_ID = p.PROGRAMME_ID
-                JOIN YEAR y ON dv.YEAR_NUMBER = y.YEAR_NUMBER
-                WHERE tt.ACADEMIC_YEAR = ? AND tt.SEMESTER = ?
-            ", [$meta['ACADEMIC_YEAR'], $meta['SEMESTER']]);
-
-            $roomSchedules = [];
-            while ($r = $clsSchedRes->fetch_assoc()) {
-                $roomSchedules[$r['CLASSROOM_ID']][$r['WEEKDAY']][$r['SLOT_ID']] = $r;
-            }
-
-            // Table Header Row: TimeSlots
-            echo '<Row ss:Height="25">';
-            echo '<Cell ss:StyleID="TableHeader"><Data ss:Type="String">Room No</Data></Cell>';
-            echo '<Cell ss:StyleID="TableHeader"><Data ss:Type="String">Weekday</Data></Cell>';
-            foreach ($allTimeslots as $slot) {
-                $timeRange = date("g:i", strtotime($slot['START_TIME'])) . " to " . date("g:i", strtotime($slot['END_TIME']));
-                if ($slot['SLOT_TYPE'] === 'BREAK') {
-                    $timeRange .= " (BREAK)";
-                }
-                echo '<Cell ss:StyleID="TableHeader"><Data ss:Type="String">' . htmlspecialchars($timeRange) . '</Data></Cell>';
-            }
-            echo '</Row>';
-
-            // Table Rows: Grouped by Classroom
-            while ($cr = $clsRes->fetch_assoc()) {
-                $classroomId = $cr['CLASSROOM_ID'];
-                $roomNumber = htmlspecialchars($cr['ROOM_NUMBER']);
-                $totalDays = count($weekdays);
-
-                foreach ($weekdays as $index => $day) {
-                    echo '<Row ss:Height="35">';
-
-                    if ($index === 0) {
-                        echo '<Cell ss:MergeDown="' . ($totalDays - 1) . '" ss:StyleID="TableCell"><Data ss:Type="String">' . $roomNumber . '</Data></Cell>';
-                        echo '<Cell ss:StyleID="TableCell"><Data ss:Type="String">' . $day . '</Data></Cell>';
-                    } else {
-                        echo '<Cell ss:Index="2" ss:StyleID="TableCell"><Data ss:Type="String">' . $day . '</Data></Cell>';
-                    }
-
-                    foreach ($allTimeslots as $slot) {
-                        $slotId = $slot['SLOT_ID'];
-
-                        if ($slot['SLOT_TYPE'] === 'BREAK') {
-                            echo '<Cell ss:StyleID="BreakCell"><Data ss:Type="String">BREAK</Data></Cell>';
-                        } else if (isset($roomSchedules[$classroomId][$day][$slotId])) {
-                            $entry = $roomSchedules[$classroomId][$day][$slotId];
-                            $formattedDetail = htmlspecialchars($entry['COURSE_SHORT_NAME']) . '-' . 
-                                               str_replace(' ', '', ucwords(strtolower(htmlspecialchars($entry['YEAR_NAME'])))) . '-' . 
-                                               htmlspecialchars($entry['PROGRAMME_NAME']) . '-' . 
-                                               htmlspecialchars($entry['DIVISION_NAME']);
-
-                            echo '<Cell ss:StyleID="TableCell"><Data ss:Type="String">' . $formattedDetail . '</Data></Cell>';
-                        } else {
-                            echo '<Cell ss:StyleID="TableCell"><Data ss:Type="String">-</Data></Cell>';
-                        }
-                    }
-
-                    echo '</Row>';
-                }
-            }
-
-            echo '</Table>';
-            echo '</Worksheet>';
-            */
             echo '</Workbook>';
             exit;
         }
@@ -4084,7 +3994,8 @@ try {
 
 } catch (Throwable $e) {
     // Catch ALL exceptions/errors and return them as valid JSON
-    sendJsonResponse(500, 'Server Error', $e->getMessage());
+    sendJsonResponse(500, 'Server Error', "An error occured...Contact system admin.");
+    // sendJsonResponse(500, 'Server Error', $e->getMessage());
 }
 
 ?>

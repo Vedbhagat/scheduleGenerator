@@ -8,7 +8,7 @@
             <div>
                 <label for="departmentDropdown">*Department</label>
                 <select class="dropdown myInput" name="departmentDropdown" id="departmentDropdown" disabled required>
-                    <option value="" disabled selected>Select Department</option>
+                    <option value="" disabled selected>Loading Department</option>
                 </select>
             </div>
         </fieldset>
@@ -140,6 +140,7 @@ async function extractDepartment() {
     var departmentSelect = $('#departmentDropdown');
     
     departmentSelect.find('option:not(:first)').remove();
+    departmentSelect.empty().append('<option value="" disabled selected>Select Department</option>');
     depts.forEach(dept => {
         departmentSelect.append(`<option value="${dept.DEPARTMENT_ID}">${dept.LONG_NAME}</option>`);
     });
@@ -212,6 +213,7 @@ async function prefillUpdateform(recordId) {
 
     $('#teacherId').val(data.TEACHER_ID);
     $('#departmentDropdown').val(data.DEPARTMENT_ID);
+    // $('#departmentDropdown').prop('disabled', true);
     $('#fname').val(data.FIRST_NAME);
     $('#lname').val(data.LAST_NAME);
 
@@ -240,6 +242,7 @@ async function prefillUpdateform(recordId) {
 
 function cancelPrefilledUpdateform() {
     form.reset();
+    $('#departmentDropdown').prop('disabled', false);
     $('#teacherId').val("");
     $('#prmyBtn').text("Create").attr("onclick", "add_teacher()");
     $('#sndyBtn').attr("onclick", "cancelPrefilledUpdateform()");
