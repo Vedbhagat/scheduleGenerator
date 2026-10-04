@@ -55,6 +55,9 @@
                 <button class="btn secondary" onclick="exportToPDF();" title="Export current view to PDF">
                     Export PDF
                 </button>
+                <button class="btn secondary" onclick="exportValidationPDF();" title="Download Department & Teacher wise Unallocated Workload Validation PDF">
+                    Validation PDF
+                </button>
                 <button class="btn critical" onclick="confirmRegenerate();" title="Wipe current timetable and regenerate">
                     Regenerate
                 </button>
@@ -77,7 +80,8 @@
         </div>
     </div>
 </div>
-        <!-- Timetable Grid -->
+
+<!-- Timetable Grid -->
 <div class="timetable-table-container">
     <table class="view-table">
         <thead>
@@ -91,7 +95,6 @@
         </tbody>
     </table>
 </div>
-
 
 <script>
 var currentTimetableData = null;
@@ -139,7 +142,7 @@ async function generateTimetable() {
     formData.append('formCategory', 'timetable');
     formData.append('formType', 'generate_and_save');
 
-    timer =showLoader("Generating Timetable...");
+    timer = showLoader("Generating Timetable...");
     try {
         var res = await $.ajax({
             url: 'api.php',
@@ -161,7 +164,7 @@ async function generateTimetable() {
 
 // Fetch generated timetable grid data
 async function loadTimetableData() {
-    timer =showLoader("Loading Timetable...");
+    timer = showLoader("Loading Timetable...");
     var formData = new FormData();
     formData.append('formCategory', 'timetable');
     formData.append('formType', 'get_division_view');
@@ -229,12 +232,12 @@ function renderSelectedDivisionTimetable(divisionId) {
         return false;
     });
 
-    // --- 2. TRIM LEADING BREAKS (Breaks before the first lecture) ---
+    // --- 2. TRIM LEADING BREAKS ---
     while (filteredSlots.length > 0 && filteredSlots[0].SLOT_TYPE === 'BREAK') {
         filteredSlots.shift();
     }
 
-    // --- 3. TRIM TRAILING BREAKS (Breaks after the last lecture) ---
+    // --- 3. TRIM TRAILING BREAKS ---
     while (filteredSlots.length > 0 && filteredSlots[filteredSlots.length - 1].SLOT_TYPE === 'BREAK') {
         filteredSlots.pop();
     }
@@ -248,7 +251,7 @@ function renderSelectedDivisionTimetable(divisionId) {
             if (tempBreak === null) {
                 tempBreak = Object.assign({}, slot);
             } else {
-                tempBreak.END_TIME = slot.END_TIME; // Extend end time
+                tempBreak.END_TIME = slot.END_TIME;
             }
         } else {
             if (tempBreak !== null) {
@@ -316,7 +319,9 @@ function exportToPDF() {
     window.open('api.php?formCategory=timetable&formType=export_pdf', '_blank');
 }
 
-
+function exportValidationPDF() {
+    window.open('api.php?formCategory=timetable&formType=export_validation_pdf', '_blank');
+}
 
 // Confirmation Dialog to Reset/Regenerate
 function confirmRegenerate() {
@@ -336,8 +341,8 @@ function confirmRegenerate() {
         dataType: 'json'
     }).done(function() {
         checkTimetableStatus();
-        $("#timetableGridBody").empty()
-        $("#tableHeaderRow").empty()
+        $("#timetableGridBody").empty();
+        $("#tableHeaderRow").empty();
     });
 }
 

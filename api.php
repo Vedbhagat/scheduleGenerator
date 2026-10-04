@@ -1712,6 +1712,148 @@ try {
             $conn->execute_query("TRUNCATE TABLE TIMETABLE");
             sendJsonResponse(200, "Timetable cleared");
         }
+        elseif ($formtype == 'export_validation_pdf') {
+            $metaQuery = $conn->execute_query("SELECT ACADEMIC_YEAR, SEMESTER FROM TIMETABLE LIMIT 1");
+            if ($metaQuery->num_rows == 0) {
+                echo "<h3 style='font-family: Arial, sans-serif; text-align: center; margin-top: 50px;'>No timetable generated yet to export validation report.</h3>";
+                exit;
+            }
+            $meta = $metaQuery->fetch_assoc();
+
+            $sql = "
+                SELECT 
+                    d.DEPARTMENT_ID,
+                    d.LONG_NAME AS DEPARTMENT_NAME,
+                    tr.TEACHER_ID,
+                    CONCAT(tr.FIRST_NAME, ' ', tr.LAST_NAME) AS TEACHER_NAME,
+                    c.SHORT_NAME AS COURSE_SHORT_NAME,
+                    c.LONG_NAME AS COURSE_NAME,
+                    c.ISPRACTICAL,
+                    p.SHORT_NAME AS PROGRAMME_NAME,
+                    y.YEAR_NAME,
+                    dv.NAME AS DIVISION_NAME,
+                    t.LECTURE_COUNT AS REQUIRED_LECTURES,
+                    COALESCE(tt_count.allocated, 0) AS ALLOCATED_LECTURES,
+                    (t.LECTURE_COUNT - COALESCE(tt_count.allocated, 0)) AS UNALLOCATED_LECTURES
+                FROM TEACHES t
+                JOIN TEACHER tr ON t.TEACHER_ID = tr.TEACHER_ID
+                JOIN DEPARTMENT d ON tr.DEPARTMENT_ID = d.DEPARTMENT_ID
+                JOIN COURSE c ON t.COURSE_ID = c.COURSE_ID
+                JOIN DIVISION dv ON t.DIVISION_ID = dv.DIVISION_ID
+                JOIN PROGRAMME p ON dv.PROGRAMME_ID = p.PROGRAMME_ID
+                JOIN YEAR y ON dv.YEAR_NUMBER = y.YEAR_NUMBER
+                LEFT JOIN (
+                    SELECT TEACHER_ID, COURSE_ID, DIVISION_ID, COUNT(*) AS allocated
+                    FROM TIMETABLE
+                    WHERE ACADEMIC_YEAR = ? AND SEMESTER = ?
+                    GROUP BY TEACHER_ID, COURSE_ID, DIVISION_ID
+                ) tt_count ON tt_count.TEACHER_ID = t.TEACHER_ID 
+                           AND tt_count.COURSE_ID = t.COURSE_ID 
+                           AND tt_count.DIVISION_ID = t.DIVISION_ID
+                WHERE c.SEMESTER = ?
+                HAVING UNALLOCATED_LECTURES > 0
+                ORDER BY d.LONG_NAME, TEACHER_NAME, p.SHORT_NAME, y.YEAR_NUMBER, dv.NAME, c.SHORT_NAME
+            ";
+
+            $res = $conn->execute_query($sql, [$meta['ACADEMIC_YEAR'], $meta['SEMESTER'], $meta['SEMESTER']]);
+            $unallocatedList = [];
+            $totalUnallocatedHours = 0;
+
+            while ($row = $res->fetch_assoc()) {
+                $dept = $row['DEPARTMENT_NAME'];
+                $unallocatedList[$dept][] = $row;
+                $totalUnallocatedHours += (int)$row['UNALLOCATED_LECTURES'];
+            }
+
+            header('Content-Type: text/html; charset=utf-8');
+            ?>
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Unallocated Workload Validation Report</title>
+                <style>
+                    @page { size: A4 portrait; margin: 12mm; }
+                    body { font-family: Arial, sans-serif; font-size: 11px; color: #1f2937; margin: 0; padding: 0; line-height: 1.4; }
+                    .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 8px; margin-bottom: 12px; }
+                    .header h1 { font-size: 15px; margin: 0; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .header h2 { font-size: 12px; margin: 4px 0 0 0; color: #374151; font-weight: bold; text-transform: uppercase; }
+                    .meta-bar { display: flex; justify-content: space-between; font-size: 10px; font-weight: bold; color: #4b5563; margin-top: 6px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
+                    .summary-card { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 8px 12px; font-size: 11px; font-weight: bold; margin-bottom: 12px; border-radius: 4px; }
+                    .dept-title { font-size: 12px; font-weight: bold; color: #1e3a8a; background: #eff6ff; padding: 6px 10px; border-left: 4px solid #2563eb; margin-top: 14px; margin-bottom: 8px; text-transform: uppercase; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; table-layout: fixed; }
+                    th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; font-size: 10px; word-wrap: break-word; }
+                    th { background-color: #f3f4f6; color: #111827; font-weight: bold; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .badge-pending { color: #dc2626; font-weight: bold; }
+                    .success-banner { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 20px; text-align: center; font-weight: bold; font-size: 13px; border-radius: 6px; margin-top: 30px; }
+                </style>
+            </head>
+            <body onload="window.print();">
+                <div class="header">
+                    <h1>KET's V. G. Vaze College of Arts, Science and Commerce (Autonomous)</h1>
+                    <h2>Unallocated Workload Validation Report</h2>
+                    <div class="meta-bar">
+                        <span>Academic Year: <?= htmlspecialchars($meta['ACADEMIC_YEAR']) ?></span>
+                        <span>Semester: <?= htmlspecialchars($meta['SEMESTER']) ?></span>
+                        <span>Total Unallocated Hours: <?= $totalUnallocatedHours ?></span>
+                        <span>Generated: <?= date('d-M-Y H:i') ?></span>
+                    </div>
+                </div>
+
+                <?php if (empty($unallocatedList)): ?>
+                    <div class="success-banner">
+                        ✓ All workloads have been 100% allocated successfully!<br>
+                        <span style="font-size: 11px; font-weight: normal; color: #15803d;">There are zero unallocated lectures or practicals for Semester <?= htmlspecialchars($meta['SEMESTER']) ?> (A.Y: <?= htmlspecialchars($meta['ACADEMIC_YEAR']) ?>).</span>
+                    </div>
+                <?php else: ?>
+                    <div class="summary-card">
+                        ⚠️ Attention: A total of <?= $totalUnallocatedHours ?> workload hour(s) could not be scheduled in the timetable grid due to constraints.
+                    </div>
+
+                    <?php foreach ($unallocatedList as $deptName => $items): ?>
+                        <div class="dept-title">Department: <?= htmlspecialchars($deptName) ?></div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 5%;" class="text-center">#</th>
+                                    <th style="width: 22%;">Teacher Name</th>
+                                    <th style="width: 23%;">Programme & Division</th>
+                                    <th style="width: 22%;">Course / Subject</th>
+                                    <th style="width: 10%;" class="text-center">Type</th>
+                                    <th style="width: 6%;" class="text-center">Req.</th>
+                                    <th style="width: 6%;" class="text-center">Alloc.</th>
+                                    <th style="width: 6%;" class="text-center">Pending</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $srNo = 1;
+                                foreach ($items as $row): 
+                                    $classInfo = strtoupper(($row['YEAR_NAME'] == "FIRST YEAR") ? "FY" : (($row['YEAR_NAME'] == "SECOND YEAR") ? "SY" : (($row['YEAR_NAME'] == "THIRD YEAR") ? "TY" : ""))) 
+                                                 . " " . $row['PROGRAMME_NAME'] . " - Div " . $row['DIVISION_NAME'];
+                                    $type = !empty($row['ISPRACTICAL']) ? 'Practical' : 'Lecture';
+                                ?>
+                                    <tr>
+                                        <td class="text-center"><?= $srNo++ ?></td>
+                                        <td><b><?= htmlspecialchars($row['TEACHER_NAME']) ?></b></td>
+                                        <td><?= htmlspecialchars($classInfo) ?></td>
+                                        <td><?= htmlspecialchars($row['COURSE_NAME']) ?> (<?= htmlspecialchars($row['COURSE_SHORT_NAME']) ?>)</td>
+                                        <td class="text-center"><?= $type ?></td>
+                                        <td class="text-center"><?= $row['REQUIRED_LECTURES'] ?></td>
+                                        <td class="text-center"><?= $row['ALLOCATED_LECTURES'] ?></td>
+                                        <td class="text-center badge-pending"><?= $row['UNALLOCATED_LECTURES'] ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </body>
+            </html>
+            <?php
+            exit;
+        }
         elseif ($formtype == 'export_pdf_old') {
             $metaQuery = $conn->execute_query("SELECT ACADEMIC_YEAR, SEMESTER FROM TIMETABLE LIMIT 1");
             if ($metaQuery->num_rows == 0) {

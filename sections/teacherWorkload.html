@@ -46,6 +46,12 @@
             </fieldset>
             <fieldset>
                 <div>
+                    <label>Department of teacher (Change only if required)</label>
+                    <select class="dropdown inp-w-base" name="departmentTeacher" id="departmentTeacher" required onchange="populateTeacher(this)">
+                        <option value="" disabled selected>Loading Department</option>
+                    </select>
+                </div>
+                <div>
                     <label>Teacher</label>
                     <select class="dropdown inp-w-base" name="teacherId" id="teacherId" disabled required>
                         <option value="" disabled selected>Loading Teacher</option>
@@ -112,11 +118,21 @@ async function populateDepartment() {
             </option>
         `);
     });
-    departmentSelect.prop('disabled', false);
+    var departmentTeacherSelect = $('#departmentTeacher');
+    departmentTeacherSelect.empty().append(`<option value='' disabled selected>Select Department</option>`);
+    depts.forEach(dept => {
+        departmentTeacherSelect.append(`
+            <option value="${dept.DEPARTMENT_ID}">
+                ${dept.LONG_NAME}
+            </option>
+        `);
+    });
+    departmentTeacherSelect.prop('disabled', false);
 }
 
 async function populateProgramme(select) {
     var chosenDepartment = select.value;
+    $('#departmentTeacher').val(select.value)
     var minimalData = await getPrerequisits('programme');
     var pgrms = minimalData.responseBody.programmes || [];
     var programmeSelect = $('#programmeId');
