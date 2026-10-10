@@ -56,7 +56,7 @@
     },
     {
         "sequence": 5,
-        "dataCount": 10,
+        "dataCount": 11,
         "label": "Course",
         "module": "course",
         "isLocked": true,
@@ -67,7 +67,7 @@
     },
     {
         "sequence": 6,
-        "dataCount": 2,
+        "dataCount": 0,
         "label": "Optional Course",
         "module": "optionalCourses",
         "isLocked": true,
@@ -100,7 +100,7 @@
     },
     {
         "sequence": 9,
-        "dataCount": 19,
+        "dataCount": 21,
         "label": "Workload",
         "module": "teacherWorkload",
         "isLocked": true,
